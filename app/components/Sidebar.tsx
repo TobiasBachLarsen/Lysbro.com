@@ -48,16 +48,18 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   const [userEmail, setUserEmail] = useState("");
   const [userInitials, setUserInitials] = useState("?");
   const [plan, setPlan] = useState<PlanMeta>(planProp ?? PLANS.gratis);
-  const [notifications, setNotifications] = useState<Notif[]>([]);
+  const [notifications] = useState<Notif[]>([]);
   const [pendingRequests, setPendingRequests] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const unread = notifications.filter((n) => !n.read).length;
   const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
+    let cancelled = false;
+
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return;
+      if (!user || cancelled) return;
       setUserEmail(user.email ?? "");
       const name = user.user_metadata?.full_name ?? user.email ?? "";
       setUserInitials(name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2));
@@ -66,52 +68,18 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         setPlan(PLANS[data.plan as keyof typeof PLANS]);
       }
 
-      // Load pending contact requests count
       const { count } = await supabase.from("contact_requests")
         .select("id", { count: "exact" }).eq("receiver_id", user.id).eq("status", "pending");
       setPendingRequests(count ?? 0);
 
-      // Realtime: listen for new contact requests
-      supabase.channel("contact-requests")
-        .on("postgres_changes", {
-          event: "INSERT",
-          schema: "public",
-          table: "contact_requests",
-          filter: `receiver_id=eq.${user.id}`,
-        }, async (payload) => {
-          const { data: sender } = await supabase.from("profiles")
-            .select("full_name, email").eq("id", payload.new.sender_id).single();
-          const senderName = sender?.full_name ?? sender?.email ?? "Nogen";
-          setPendingRequests((c) => c + 1);
-          setNotifications((prev) => [{
-            id: payload.new.id,
-            text: `${senderName} vil gerne være kontakt`,
-            sub: "Kontaktanmodning",
-            color: "#3b82f6",
-            read: false,
-          }, ...prev]);
-          setToast(`${senderName} sendte en kontaktanmodning`);
-          setTimeout(() => setToast(null), 4000);
-        })
-        // Listen for accepted requests (DELETE means accepted by receiver)
-        .on("postgres_changes", {
-          event: "DELETE",
-          schema: "public",
-          table: "contact_requests",
-          filter: `sender_id=eq.${user.id}`,
-        }, () => {
-          setNotifications((prev) => [{
-            id: crypto.randomUUID(),
-            text: "Din kontaktanmodning blev accepteret",
-            sub: "Ny kontakt tilføjet",
-            color: "#22c55e",
-            read: false,
-          }, ...prev]);
-          setToast("Din kontaktanmodning blev accepteret!");
-          setTimeout(() => setToast(null), 4000);
-        })
-        .subscribe();
+      const { data: files } = await supabase.storage.from("avatars").list(user.id);
+      if (files && files.length > 0) {
+        const { data: signed } = await supabase.storage.from("avatars").createSignedUrl(`${user.id}/${files[0].name}`, 604800);
+        if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
+      }
     });
+
+    return () => { cancelled = true; };
   }, []);
 
   const handleSignOut = async () => {
@@ -296,10 +264,13 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         {/* User */}
         <div className="flex items-center gap-3">
           <div
-            className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-            style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}
+            className="h-8 w-8 rounded-full shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold text-white"
+            style={avatarUrl ? {} : { background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}
           >
-            {userInitials}
+            {avatarUrl
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+              : userInitials}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-white truncate">{userEmail}</p>
@@ -324,15 +295,6 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
 
   return (
     <>
-      {/* Toast notification */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-[100] animate-fade-in flex items-center gap-3 rounded-2xl px-5 py-4 shadow-2xl"
-          style={{ background: "#0d1117", border: "1px solid rgba(59,130,246,0.35)", boxShadow: "0 8px 40px rgba(0,0,0,0.6)" }}>
-          <div className="h-2 w-2 rounded-full shrink-0" style={{ background: "#3b82f6" }} />
-          <p className="text-sm font-medium text-white">{toast}</p>
-        </div>
-      )}
-
       {/* Desktop sidebar */}
       <aside
         className="hidden lg:flex w-64 shrink-0 flex-col"

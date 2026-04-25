@@ -75,7 +75,8 @@ export default function SubscriptionPage() {
         <div>
           <h1 className="text-base font-semibold text-white">Abonnement</h1>
           <p className="text-xs" style={{ color: "#475569" }}>
-            Du er på <span style={{ color: "#60a5fa" }}>Gratis-planen</span> — opgrader for at fjerne reklamer
+            Du er på <span style={{ color: "#60a5fa" }}>{plans.find(p => p.id === currentPlan)?.name ?? "Gratis"}-planen</span>
+            {currentPlan === "gratis" ? " — opgrader for at fjerne reklamer" : " — tak for dit abonnement"}
           </p>
         </div>
       </header>
