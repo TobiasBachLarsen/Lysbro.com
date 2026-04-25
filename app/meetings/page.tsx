@@ -111,8 +111,8 @@ function MeetingRow({ meeting, dimmed }: { meeting: Meeting; dimmed?: boolean })
       }}
     >
       <div className="flex items-center gap-4">
-        <div className="relative h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: meeting.live ? "rgba(239,68,68,0.12)" : meeting.status === "upcoming" ? "rgba(59,130,246,0.12)" : "rgba(255,255,255,0.05)" }}>
-          <svg className="h-5 w-5" style={{ color: meeting.live ? "#f87171" : meeting.status === "upcoming" ? "#60a5fa" : "#475569" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div className="relative h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: meeting.live ? "rgba(239,68,68,0.12)" : !dimmed ? "rgba(59,130,246,0.12)" : "rgba(255,255,255,0.05)" }}>
+          <svg className="h-5 w-5" style={{ color: meeting.live ? "#f87171" : !dimmed ? "#60a5fa" : "#475569" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
           </svg>
           {meeting.live && (
@@ -129,7 +129,7 @@ function MeetingRow({ meeting, dimmed }: { meeting: Meeting; dimmed?: boolean })
             )}
           </div>
           <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
-            {meeting.date} · {meeting.time} · {meeting.duration} · {meeting.participants} deltagere
+            {meeting.date} · {meeting.time} · {meeting.duration}
           </p>
         </div>
       </div>
@@ -137,11 +137,11 @@ function MeetingRow({ meeting, dimmed }: { meeting: Meeting; dimmed?: boolean })
       <div className="flex items-center gap-4">
         {/* Status badge */}
         <span className="rounded-full px-3 py-1 text-xs font-semibold" style={
-          meeting.status === "upcoming"
+          !dimmed
             ? { background: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.25)" }
             : { background: "rgba(255,255,255,0.05)", color: "#475569", border: "1px solid rgba(255,255,255,0.08)" }
         }>
-          {meeting.status === "upcoming" ? "Kommende" : "Afholdt"}
+          {!dimmed ? "Kommende" : "Afholdt"}
         </span>
 
         {/* Actions */}
@@ -151,7 +151,7 @@ function MeetingRow({ meeting, dimmed }: { meeting: Meeting; dimmed?: boolean })
             style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8" }}>
             Detaljer
           </Link>
-          {meeting.status === "upcoming" && (
+          {!dimmed && (
             <Link href={`/room/${meeting.id}`} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: meeting.live ? "#ef4444" : "linear-gradient(135deg, #3b82f6, #06b6d4)" }}>
               {meeting.live ? "Deltag nu" : "Start"}
             </Link>
