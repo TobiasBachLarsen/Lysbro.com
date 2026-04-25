@@ -56,6 +56,8 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
 
   useEffect(() => {
     const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       setUserEmail(user.email ?? "");
@@ -66,13 +68,11 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         setPlan(PLANS[data.plan as keyof typeof PLANS]);
       }
 
-      // Load pending contact requests count
       const { count } = await supabase.from("contact_requests")
         .select("id", { count: "exact" }).eq("receiver_id", user.id).eq("status", "pending");
       setPendingRequests(count ?? 0);
 
-      // Realtime: listen for new contact requests
-      supabase.channel("contact-requests")
+      channel = supabase.channel(`contact-requests-${user.id}`)
         .on("postgres_changes", {
           event: "INSERT",
           schema: "public",
@@ -93,7 +93,6 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
           setToast(`${senderName} sendte en kontaktanmodning`);
           setTimeout(() => setToast(null), 4000);
         })
-        // Listen for accepted requests (DELETE means accepted by receiver)
         .on("postgres_changes", {
           event: "DELETE",
           schema: "public",
@@ -112,6 +111,8 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         })
         .subscribe();
     });
+
+    return () => { if (channel) supabase.removeChannel(channel); };
   }, []);
 
   const handleSignOut = async () => {
