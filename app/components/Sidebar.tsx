@@ -50,12 +50,12 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   const [plan, setPlan] = useState<PlanMeta>(planProp ?? PLANS.gratis);
   const [notifications] = useState<Notif[]>([]);
   const [pendingRequests, setPendingRequests] = useState(0);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const unread = notifications.filter((n) => !n.read).length;
   const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
-    let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -71,6 +71,12 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
       const { count } = await supabase.from("contact_requests")
         .select("id", { count: "exact" }).eq("receiver_id", user.id).eq("status", "pending");
       setPendingRequests(count ?? 0);
+
+      const { data: files } = await supabase.storage.from("avatars").list(user.id);
+      if (files && files.length > 0) {
+        const { data: signed } = await supabase.storage.from("avatars").createSignedUrl(`${user.id}/${files[0].name}`, 604800);
+        if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
+      }
     });
 
     return () => { cancelled = true; };
@@ -258,10 +264,13 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         {/* User */}
         <div className="flex items-center gap-3">
           <div
-            className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-            style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}
+            className="h-8 w-8 rounded-full shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold text-white"
+            style={avatarUrl ? {} : { background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}
           >
-            {userInitials}
+            {avatarUrl
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+              : userInitials}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-white truncate">{userEmail}</p>

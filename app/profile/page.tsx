@@ -15,7 +15,6 @@ const avatarColors = [
 export default function ProfilePage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [userId, setUserId] = useState("");
   const [selectedColor, setSelectedColor] = useState(0);
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
@@ -36,10 +35,13 @@ export default function ProfilePage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (user) {
         setEmail(user.email ?? "");
-        setUserId(user.id);
         setName(user.user_metadata?.full_name ?? user.email ?? "");
-        const { data } = await supabase.from("profiles").select("avatar_url").eq("id", user.id).single();
-        if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+        // Load avatar directly from storage using signed URL (works for both public and private buckets)
+        const { data: files } = await supabase.storage.from("avatars").list(user.id);
+        if (files && files.length > 0) {
+          const { data: signed } = await supabase.storage.from("avatars").createSignedUrl(`${user.id}/${files[0].name}`, 604800);
+          if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
+        }
       }
     });
   }, []);
@@ -123,7 +125,8 @@ export default function ProfilePage() {
               title="Skift profilbillede"
             >
               {avatarUrl ? (
-                <div className="h-full w-full bg-cover bg-center rounded-2xl" style={{ backgroundImage: `url(${avatarUrl})` }} />
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="Profilbillede" className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-2xl font-black text-white" style={{ background: avatarColors[selectedColor].value }}>
                   {initials}
