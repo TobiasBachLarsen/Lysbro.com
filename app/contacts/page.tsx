@@ -117,15 +117,8 @@ export default function ContactsPage() {
 
   const handleAccept = async (req: Request) => {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Add both directions as contacts
-    await supabase.from("contacts").insert([
-      { user_id: user.id, name: req.sender_name, email: req.sender_email },
-      { user_id: req.sender_id, name: user.user_metadata?.full_name ?? user.email, email: user.email },
-    ]);
-    await supabase.from("contact_requests").delete().eq("id", req.id);
+    const { error } = await supabase.rpc("accept_contact_request", { request_id: req.id });
+    if (error) { console.error("accept fejl:", error.message); return; }
 
     setRequests((prev) => prev.filter((r) => r.id !== req.id));
     setContacts((prev) => [...prev, {
