@@ -15,16 +15,7 @@ const avatarColors = [
 export default function ProfilePage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setEmail(user.email ?? "");
-        setName(user.user_metadata?.full_name ?? user.email ?? "");
-      }
-    });
-  }, []);
+  const [userId, setUserId] = useState("");
   const [selectedColor, setSelectedColor] = useState(0);
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
@@ -33,25 +24,62 @@ export default function ProfilePage() {
   const [notifNewParticipant, setNotifNewParticipant] = useState(true);
   const [notifMarketing, setNotifMarketing] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [savedProfile, setSavedProfile] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [savedPw, setSavedPw] = useState(false);
   const [pwError, setPwError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        setEmail(user.email ?? "");
+        setUserId(user.id);
+        setName(user.user_metadata?.full_name ?? user.email ?? "");
+        const { data } = await supabase.from("profiles").select("avatar_url").eq("id", user.id).single();
+        if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+      }
+    });
+  }, []);
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setAvatarFile(file);
     setAvatarUrl(URL.createObjectURL(file));
   };
 
   const handleRemoveAvatar = () => {
     setAvatarUrl(null);
+    setAvatarFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const initials = name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    const supabase = createClient();
+    let finalAvatarUrl = avatarUrl;
+
+    if (avatarFile) {
+      const ext = avatarFile.name.split(".").pop();
+      const path = `${userId}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, avatarFile, { upsert: true });
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+        finalAvatarUrl = publicUrl;
+        setAvatarUrl(publicUrl);
+        setAvatarFile(null);
+      }
+    }
+
+    await supabase.from("profiles").upsert({ id: userId, full_name: name, avatar_url: finalAvatarUrl });
+    await supabase.auth.updateUser({ data: { full_name: name } });
+
+    setSavingProfile(false);
     setSavedProfile(true);
     setTimeout(() => setSavedProfile(false), 2500);
   };
@@ -205,8 +233,9 @@ export default function ProfilePage() {
             </div>
           )}
 
-          <button onClick={handleSaveProfile} className="btn-gradient px-6 py-2.5 text-sm rounded-xl">
-            Gem ændringer
+          <button onClick={handleSaveProfile} disabled={savingProfile} className="btn-gradient px-6 py-2.5 text-sm rounded-xl flex items-center gap-2" style={{ opacity: savingProfile ? 0.7 : 1 }}>
+            {savingProfile && <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>}
+            {savingProfile ? "Gemmer…" : "Gem ændringer"}
           </button>
         </div>
 
