@@ -19,7 +19,9 @@ export default function ContactsPage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.from("contacts").select("*").order("name").then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data } = await supabase.from("contacts").select("*").eq("user_id", user.id).order("name");
       setContacts((data ?? []).map((c, i) => ({
         ...c,
         initials: c.name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2),
@@ -53,7 +55,8 @@ export default function ContactsPage() {
     if (!newName.trim()) { setAddError("Indtast et navn"); return; }
     if (!newEmail.includes("@")) { setAddError("Indtast en gyldig e-mail"); return; }
     const supabase = createClient();
-    const { data, error } = await supabase.from("contacts").insert({ name: newName.trim(), email: newEmail.trim() }).select().single();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase.from("contacts").insert({ name: newName.trim(), email: newEmail.trim(), user_id: user?.id }).select().single();
     if (error) { setAddError("Kunne ikke tilføje kontakt"); return; }
     setContacts((prev) => [...prev, {
       ...data,
