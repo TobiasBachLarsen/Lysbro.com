@@ -138,23 +138,7 @@ export default function ContactsPage() {
 
   const handleDelete = async (id: string) => {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const contact = contacts.find((c) => c.id === id);
-    await supabase.from("contacts").delete().eq("id", id);
-
-    // Also remove current user from the other person's contact list
-    if (contact) {
-      const { data: otherProfile } = await supabase.from("profiles")
-        .select("id").eq("email", contact.email).maybeSingle();
-      if (otherProfile) {
-        await supabase.from("contacts").delete()
-          .eq("user_id", otherProfile.id)
-          .eq("email", user.email);
-      }
-    }
-
+    await supabase.rpc("delete_contact_mutual", { contact_id: id });
     setContacts((prev) => prev.filter((c) => c.id !== id));
   };
 
