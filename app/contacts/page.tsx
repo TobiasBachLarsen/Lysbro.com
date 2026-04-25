@@ -37,6 +37,18 @@ export default function ContactsPage() {
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [addError, setAddError] = useState("");
+  const [userSuggestions, setUserSuggestions] = useState<{ id: string; full_name: string; email: string }[]>([]);
+
+  const searchUsers = async (q: string) => {
+    if (q.length < 2) { setUserSuggestions([]); return; }
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data } = await supabase.from("profiles").select("id, full_name, email")
+      .neq("id", user?.id)
+      .or(`email.ilike.%${q}%,full_name.ilike.%${q}%`)
+      .limit(5);
+    setUserSuggestions(data ?? []);
+  };
 
   const filtered = contacts.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase())
@@ -105,13 +117,33 @@ export default function ContactsPage() {
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
               </div>
+              <div className="relative">
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: "#64748b" }}>Søg bruger eller indtast e-mail</label>
+                <input className="input-dark" placeholder="navn eller e-mail..." value={newEmail} onChange={(e) => { setNewEmail(e.target.value); setAddError(""); searchUsers(e.target.value); }} />
+                {userSuggestions.length > 0 && (
+                  <div className="absolute z-10 left-0 right-0 mt-1 rounded-xl overflow-hidden" style={{ background: "#0d1117", border: "1px solid rgba(255,255,255,0.1)" }}>
+                    {userSuggestions.map((u) => (
+                      <button key={u.id} type="button" className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all"
+                        style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+                        onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)")}
+                        onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "transparent")}
+                        onClick={() => { setNewEmail(u.email ?? ""); setNewName(u.full_name ?? ""); setUserSuggestions([]); }}
+                      >
+                        <div className="h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}>
+                          {(u.full_name ?? u.email ?? "?")[0].toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white truncate">{u.full_name || "Unavngivet"}</p>
+                          <p className="text-xs truncate" style={{ color: "#475569" }}>{u.email}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: "#64748b" }}>Navn</label>
                 <input className="input-dark" placeholder="Fuldt navn" value={newName} onChange={(e) => { setNewName(e.target.value); setAddError(""); }} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: "#64748b" }}>E-mail</label>
-                <input className="input-dark" placeholder="navn@firma.dk" value={newEmail} onChange={(e) => { setNewEmail(e.target.value); setAddError(""); }} />
               </div>
               {addError && <p className="text-xs" style={{ color: "#f87171" }}>{addError}</p>}
               <div className="flex gap-2 pt-1">
