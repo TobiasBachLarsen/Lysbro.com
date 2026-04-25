@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppLayout from "@/app/components/AppLayout";
+import { createClient } from "@/app/lib/supabase";
 
 const plans = [
   {
@@ -11,7 +12,6 @@ const plans = [
     description: "Til enkeltpersoner og studerende",
     features: ["Op til 3 møder/måned", "Maks. 5 deltagere pr. møde", "Krypterede møder", "Europæisk hosting", "Annoncer under møder"],
     badge: null,
-    current: true,
     color: "#60a5fa",
     bg: "rgba(59,130,246,0.08)",
     border: "rgba(59,130,246,0.25)",
@@ -23,7 +23,6 @@ const plans = [
     description: "Til freelancere og små teams",
     features: ["Ubegrænsede møder", "Maks. 25 deltagere pr. møde", "Ingen reklamer", "Mødehistorik & optagelse", "Kalenderintegration", "E-mail invitationer"],
     badge: "Mest populær",
-    current: false,
     color: "#a78bfa",
     bg: "rgba(139,92,246,0.08)",
     border: "rgba(139,92,246,0.25)",
@@ -35,7 +34,6 @@ const plans = [
     description: "Til større organisationer",
     features: ["Ubegrænsede møder", "Op til 100+ deltagere", "Ingen reklamer", "GDPR-databehandleraftale", "SSO / SAML-login", "Admin-dashboard", "Prioriteret support & SLA"],
     badge: null,
-    current: false,
     color: "#22d3ee",
     bg: "rgba(6,182,212,0.08)",
     border: "rgba(6,182,212,0.25)",
@@ -45,15 +43,30 @@ const plans = [
 const invoices: { date: string; description: string; amount: string }[] = [];
 
 export default function SubscriptionPage() {
+  const [currentPlan, setCurrentPlan] = useState("gratis");
   const [selected, setSelected] = useState("gratis");
   const [upgrading, setUpgrading] = useState(false);
   const [done, setDone] = useState(false);
   const [cancelConfirm, setCancelConfirm] = useState(false);
 
-  const handleUpgrade = () => {
-    if (selected === "gratis") return;
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
+      if (data?.plan) { setCurrentPlan(data.plan); setSelected(data.plan); }
+    });
+  }, []);
+
+  const handleUpgrade = async () => {
+    if (selected === currentPlan) return;
     setUpgrading(true);
-    setTimeout(() => { setUpgrading(false); setDone(true); }, 1200);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from("profiles").upsert({ id: user?.id, plan: selected });
+    setCurrentPlan(selected);
+    setUpgrading(false);
+    setDone(true);
   };
 
   return (
@@ -99,7 +112,7 @@ export default function SubscriptionPage() {
                   border: "1px solid rgba(255,255,255,0.08)",
                 }}
               >
-                {plan.current && (
+                {currentPlan === plan.id && (
                   <span className="absolute top-4 right-4 rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.25)" }}>
                     Nuværende
                   </span>
@@ -147,9 +160,9 @@ export default function SubscriptionPage() {
         <div className="flex items-center gap-4">
           <button
             onClick={handleUpgrade}
-            disabled={selected === "gratis" || upgrading || done}
+            disabled={selected === currentPlan || upgrading || done}
             className="btn-gradient flex items-center gap-2 px-6 py-3"
-            style={{ opacity: (selected === "gratis" || upgrading || done) ? 0.45 : 1, cursor: (selected === "gratis" || upgrading || done) ? "not-allowed" : "pointer" }}
+            style={{ opacity: (selected === currentPlan || upgrading || done) ? 0.45 : 1, cursor: (selected === currentPlan || upgrading || done) ? "not-allowed" : "pointer" }}
           >
             {upgrading && (
               <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
