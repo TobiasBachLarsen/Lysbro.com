@@ -117,7 +117,7 @@ export default function SubscriptionPage() {
                     Nuværende
                   </span>
                 )}
-                {plan.badge && !plan.current && (
+                {plan.badge && currentPlan !== plan.id && (
                   <span className="absolute top-4 right-4 rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "rgba(139,92,246,0.2)", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.35)" }}>
                     {plan.badge}
                   </span>
