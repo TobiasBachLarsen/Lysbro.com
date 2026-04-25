@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Agora",
-  description: "Europe's video meeting platform",
+  title: "Agora — Europæiske videomøder",
+  description: "Sikre, GDPR-compliant videomøder hostet i Europa. Bygget på open source.",
 };
 
 export default function RootLayout({
@@ -12,8 +12,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body className="min-h-full flex flex-col bg-white text-slate-900 antialiased">
+    <html lang="da">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+      </head>
+      <body style={{ background: "#05070f", color: "#ffffff", fontFamily: "'Inter', system-ui, sans-serif" }}>
         {children}
       </body>
     </html>
