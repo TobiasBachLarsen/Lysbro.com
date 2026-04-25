@@ -46,6 +46,14 @@ export default function DashboardPage() {
     supabase.from("meetings").select("id, title, date, time").gte("date", today).order("date").limit(5).then(({ data }) => {
       setUpcomingMeetings(data ?? []);
     });
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
+      if (data?.plan) {
+        const planMap: Record<string, PlanId> = { gratis: "gratis", pro: "pro", business: "erhverv" };
+        setCurrentPlanId(planMap[data.plan] ?? "gratis");
+      }
+    });
   }, []);
 
   const plan    = PLANS[currentPlanId];
@@ -92,30 +100,8 @@ export default function DashboardPage() {
     setTimeout(() => { setJoining(false); setJoinError(true); }, 1_200);
   };
 
-  // Demo plan switcher rendered inside the sidebar
-  const planSwitcher = (
-    <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-      <p className="text-xs font-semibold mb-2" style={{ color: "#334155" }}>Demo — skift plan</p>
-      <div className="flex flex-col gap-1">
-        {(["gratis", "pro", "erhverv"] as PlanId[]).map((id) => (
-          <button
-            key={id}
-            onClick={() => { setCurrentPlanId(id); setAdDismissed(false); }}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium text-left transition-all"
-            style={currentPlanId === id
-              ? { background: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(6,182,212,0.12))", color: "#ffffff", border: "1px solid rgba(59,130,246,0.3)" }
-              : { color: "#475569", border: "1px solid transparent" }
-            }
-          >
-            {PLANS[id].label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
   return (
-    <AppLayout activeHref="/dashboard" plan={plan} sidebarExtra={planSwitcher}>
+    <AppLayout activeHref="/dashboard" plan={plan}>
 
       {/* ── Popup Ad (gratis only) ── */}
       {showAds && popupVisible && (
