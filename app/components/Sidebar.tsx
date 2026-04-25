@@ -48,9 +48,8 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   const [userEmail, setUserEmail] = useState("");
   const [userInitials, setUserInitials] = useState("?");
   const [plan, setPlan] = useState<PlanMeta>(planProp ?? PLANS.gratis);
-  const [notifications, setNotifications] = useState<Notif[]>([]);
+  const [notifications] = useState<Notif[]>([]);
   const [pendingRequests, setPendingRequests] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
   const unread = notifications.filter((n) => !n.read).length;
   const router = useRouter();
 
@@ -72,51 +71,9 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
       const { count } = await supabase.from("contact_requests")
         .select("id", { count: "exact" }).eq("receiver_id", user.id).eq("status", "pending");
       setPendingRequests(count ?? 0);
-
-      channel = supabase.channel(`contact-requests-${user.id}`)
-        .on("postgres_changes", {
-          event: "INSERT",
-          schema: "public",
-          table: "contact_requests",
-          filter: `receiver_id=eq.${user.id}`,
-        }, async (payload) => {
-          const { data: sender } = await supabase.from("profiles")
-            .select("full_name, email").eq("id", payload.new.sender_id).single();
-          const senderName = sender?.full_name ?? sender?.email ?? "Nogen";
-          setPendingRequests((c) => c + 1);
-          setNotifications((prev) => [{
-            id: payload.new.id,
-            text: `${senderName} vil gerne være kontakt`,
-            sub: "Kontaktanmodning",
-            color: "#3b82f6",
-            read: false,
-          }, ...prev]);
-          setToast(`${senderName} sendte en kontaktanmodning`);
-          setTimeout(() => setToast(null), 4000);
-        })
-        .on("postgres_changes", {
-          event: "DELETE",
-          schema: "public",
-          table: "contact_requests",
-          filter: `sender_id=eq.${user.id}`,
-        }, () => {
-          setNotifications((prev) => [{
-            id: crypto.randomUUID(),
-            text: "Din kontaktanmodning blev accepteret",
-            sub: "Ny kontakt tilføjet",
-            color: "#22c55e",
-            read: false,
-          }, ...prev]);
-          setToast("Din kontaktanmodning blev accepteret!");
-          setTimeout(() => setToast(null), 4000);
-        })
-        .subscribe();
     });
 
-    return () => {
-      cancelled = true;
-      if (channel) supabase.removeChannel(channel);
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const handleSignOut = async () => {
@@ -329,15 +286,6 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
 
   return (
     <>
-      {/* Toast notification */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-[100] animate-fade-in flex items-center gap-3 rounded-2xl px-5 py-4 shadow-2xl"
-          style={{ background: "#0d1117", border: "1px solid rgba(59,130,246,0.35)", boxShadow: "0 8px 40px rgba(0,0,0,0.6)" }}>
-          <div className="h-2 w-2 rounded-full shrink-0" style={{ background: "#3b82f6" }} />
-          <p className="text-sm font-medium text-white">{toast}</p>
-        </div>
-      )}
-
       {/* Desktop sidebar */}
       <aside
         className="hidden lg:flex w-64 shrink-0 flex-col"
