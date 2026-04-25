@@ -83,8 +83,9 @@ export default function ContactsPage() {
     if (!user) return;
 
     // Check if email belongs to a registered user
-    const registeredUser = selectedUser ?? (await supabase.from("profiles")
-      .select("id, full_name, email").eq("email", newEmail.trim()).neq("id", user.id).maybeSingle()).data;
+    const { data: profileMatch, error: profileError } = await supabase.from("profiles")
+      .select("id, full_name, email").ilike("email", newEmail.trim()).neq("id", user.id).maybeSingle();
+    const registeredUser = selectedUser ?? profileMatch;
 
     if (registeredUser) {
       // Check if request already exists
@@ -102,7 +103,7 @@ export default function ContactsPage() {
         receiver_id: registeredUser.id,
         status: "pending",
       });
-      if (error) { setAddError("Kunne ikke sende anmodning"); return; }
+      if (error) { setAddError(`Fejl: ${error.message}`); return; }
       setNewName(""); setNewEmail(""); setAddError(""); setShowAdd(false); setSelectedUser(null);
     } else {
       // Manually add non-registered contact directly
