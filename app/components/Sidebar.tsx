@@ -29,7 +29,7 @@ const NAV_LINKS = [
   { href: "/subscription", label: "Abonnement",  icon: "subscription" },
 ] as const;
 
-const NOTIFICATIONS: { id: number; text: string; sub: string; color: string; read: boolean }[] = [];
+type Notif = { id: string; text: string; sub: string; color: string; read: boolean };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -48,21 +48,69 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   const [userEmail, setUserEmail] = useState("");
   const [userInitials, setUserInitials] = useState("?");
   const [plan, setPlan] = useState<PlanMeta>(planProp ?? PLANS.gratis);
-  const unread = NOTIFICATIONS.filter((n) => !n.read).length;
+  const [notifications, setNotifications] = useState<Notif[]>([]);
+  const [pendingRequests, setPendingRequests] = useState(0);
+  const [toast, setToast] = useState<string | null>(null);
+  const unread = notifications.filter((n) => !n.read).length;
   const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (user) {
-        setUserEmail(user.email ?? "");
-        const name = user.user_metadata?.full_name ?? user.email ?? "";
-        setUserInitials(name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2));
-        const { data } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
-        if (data?.plan && PLANS[data.plan as keyof typeof PLANS]) {
-          setPlan(PLANS[data.plan as keyof typeof PLANS]);
-        }
+      if (!user) return;
+      setUserEmail(user.email ?? "");
+      const name = user.user_metadata?.full_name ?? user.email ?? "";
+      setUserInitials(name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2));
+      const { data } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
+      if (data?.plan && PLANS[data.plan as keyof typeof PLANS]) {
+        setPlan(PLANS[data.plan as keyof typeof PLANS]);
       }
+
+      // Load pending contact requests count
+      const { count } = await supabase.from("contact_requests")
+        .select("id", { count: "exact" }).eq("receiver_id", user.id).eq("status", "pending");
+      setPendingRequests(count ?? 0);
+
+      // Realtime: listen for new contact requests
+      supabase.channel("contact-requests")
+        .on("postgres_changes", {
+          event: "INSERT",
+          schema: "public",
+          table: "contact_requests",
+          filter: `receiver_id=eq.${user.id}`,
+        }, async (payload) => {
+          const { data: sender } = await supabase.from("profiles")
+            .select("full_name, email").eq("id", payload.new.sender_id).single();
+          const senderName = sender?.full_name ?? sender?.email ?? "Nogen";
+          setPendingRequests((c) => c + 1);
+          setNotifications((prev) => [{
+            id: payload.new.id,
+            text: `${senderName} vil gerne være kontakt`,
+            sub: "Kontaktanmodning",
+            color: "#3b82f6",
+            read: false,
+          }, ...prev]);
+          setToast(`${senderName} sendte en kontaktanmodning`);
+          setTimeout(() => setToast(null), 4000);
+        })
+        // Listen for accepted requests (DELETE means accepted by receiver)
+        .on("postgres_changes", {
+          event: "DELETE",
+          schema: "public",
+          table: "contact_requests",
+          filter: `sender_id=eq.${user.id}`,
+        }, () => {
+          setNotifications((prev) => [{
+            id: crypto.randomUUID(),
+            text: "Din kontaktanmodning blev accepteret",
+            sub: "Ny kontakt tilføjet",
+            color: "#22c55e",
+            read: false,
+          }, ...prev]);
+          setToast("Din kontaktanmodning blev accepteret!");
+          setTimeout(() => setToast(null), 4000);
+        })
+        .subscribe();
     });
   }, []);
 
@@ -137,6 +185,11 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
                 {Icons[icon as keyof typeof Icons]}
               </span>
               {label}
+              {href === "/contacts" && pendingRequests > 0 && (
+                <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "#3b82f6" }}>
+                  {pendingRequests}
+                </span>
+              )}
             </Link>
           );
         })}
@@ -218,7 +271,12 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
                   Luk
                 </button>
               </div>
-              {NOTIFICATIONS.map((n) => (
+              {notifications.length === 0 && (
+                <div className="px-4 py-6 text-center">
+                  <p className="text-xs" style={{ color: "#334155" }}>Ingen notifikationer</p>
+                </div>
+              )}
+              {notifications.map((n) => (
                 <div key={n.id} className="flex items-start gap-3 px-4 py-3 transition-all"
                   style={{ opacity: n.read ? 0.5 : 1, borderBottom: "1px solid rgba(255,255,255,0.04)" }}
                   onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)")}
@@ -266,6 +324,15 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
 
   return (
     <>
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-fade-in flex items-center gap-3 rounded-2xl px-5 py-4 shadow-2xl"
+          style={{ background: "#0d1117", border: "1px solid rgba(59,130,246,0.35)", boxShadow: "0 8px 40px rgba(0,0,0,0.6)" }}>
+          <div className="h-2 w-2 rounded-full shrink-0" style={{ background: "#3b82f6" }} />
+          <p className="text-sm font-medium text-white">{toast}</p>
+        </div>
+      )}
+
       {/* Desktop sidebar */}
       <aside
         className="hidden lg:flex w-64 shrink-0 flex-col"
