@@ -62,21 +62,24 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSavingProfile(false); return; }
+
     let finalAvatarUrl = avatarUrl;
 
     if (avatarFile) {
       const ext = avatarFile.name.split(".").pop();
-      const path = `${userId}/avatar.${ext}`;
+      const path = `${user.id}/avatar.${ext}`;
       const { error: uploadError } = await supabase.storage.from("avatars").upload(path, avatarFile, { upsert: true });
       if (!uploadError) {
         const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-        finalAvatarUrl = publicUrl;
-        setAvatarUrl(publicUrl);
+        finalAvatarUrl = `${publicUrl}?t=${Date.now()}`;
+        setAvatarUrl(finalAvatarUrl);
         setAvatarFile(null);
       }
     }
 
-    await supabase.from("profiles").upsert({ id: userId, full_name: name, avatar_url: finalAvatarUrl });
+    await supabase.from("profiles").upsert({ id: user.id, full_name: name, avatar_url: finalAvatarUrl });
     await supabase.auth.updateUser({ data: { full_name: name } });
 
     setSavingProfile(false);
