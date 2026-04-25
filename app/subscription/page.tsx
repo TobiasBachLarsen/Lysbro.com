@@ -195,7 +195,9 @@ export default function SubscriptionPage() {
           <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
             {invoices.length === 0 ? (
               <div className="px-6 py-10 text-center">
-                <p className="text-sm" style={{ color: "#334155" }}>Ingen fakturaer endnu — du er på Gratis-planen.</p>
+                <p className="text-sm" style={{ color: "#334155" }}>
+                  {currentPlan === "gratis" ? "Ingen fakturaer endnu — du er på Gratis-planen." : "Ingen fakturaer endnu."}
+                </p>
               </div>
             ) : invoices.map((invoice) => (
               <div
