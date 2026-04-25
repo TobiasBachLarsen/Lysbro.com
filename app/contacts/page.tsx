@@ -77,24 +77,29 @@ export default function ContactsPage() {
   };
 
   const handleAdd = async () => {
-    if (selectedUser) {
-      // Send contact request to registered user
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+    if (!newEmail.includes("@")) { setAddError("Indtast en gyldig e-mail"); return; }
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
+    // Check if email belongs to a registered user
+    const registeredUser = selectedUser ?? (await supabase.from("profiles")
+      .select("id, full_name, email").eq("email", newEmail.trim()).neq("id", user.id).maybeSingle()).data;
+
+    if (registeredUser) {
       // Check if request already exists
       const { data: existing } = await supabase.from("contact_requests")
-        .select("id").eq("sender_id", user!.id).eq("receiver_id", selectedUser.id).maybeSingle();
+        .select("id").eq("sender_id", user.id).eq("receiver_id", registeredUser.id).maybeSingle();
       if (existing) { setAddError("Du har allerede sendt en anmodning til denne bruger"); return; }
 
       // Check if already a contact
       const { data: alreadyContact } = await supabase.from("contacts")
-        .select("id").eq("user_id", user!.id).eq("email", selectedUser.email).maybeSingle();
+        .select("id").eq("user_id", user.id).eq("email", registeredUser.email).maybeSingle();
       if (alreadyContact) { setAddError("Denne bruger er allerede i dine kontakter"); return; }
 
       const { error } = await supabase.from("contact_requests").insert({
-        sender_id: user!.id,
-        receiver_id: selectedUser.id,
+        sender_id: user.id,
+        receiver_id: registeredUser.id,
         status: "pending",
       });
       if (error) { setAddError("Kunne ikke sende anmodning"); return; }
@@ -102,10 +107,7 @@ export default function ContactsPage() {
     } else {
       // Manually add non-registered contact directly
       if (!newName.trim()) { setAddError("Indtast et navn"); return; }
-      if (!newEmail.includes("@")) { setAddError("Indtast en gyldig e-mail"); return; }
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data, error } = await supabase.from("contacts").insert({ name: newName.trim(), email: newEmail.trim(), user_id: user?.id }).select().single();
+      const { data, error } = await supabase.from("contacts").insert({ name: newName.trim(), email: newEmail.trim(), user_id: user.id }).select().single();
       if (error) { setAddError("Kunne ikke tilføje kontakt"); return; }
       setContacts((prev) => [...prev, { ...data, initials: initials(data.name), color: COLORS[prev.length % COLORS.length] }]);
       setNewName(""); setNewEmail(""); setAddError(""); setShowAdd(false);
