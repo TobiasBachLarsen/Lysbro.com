@@ -57,9 +57,10 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   useEffect(() => {
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return;
+      if (!user || cancelled) return;
       setUserEmail(user.email ?? "");
       const name = user.user_metadata?.full_name ?? user.email ?? "";
       setUserInitials(name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2));
@@ -112,7 +113,10 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         .subscribe();
     });
 
-    return () => { if (channel) supabase.removeChannel(channel); };
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleSignOut = async () => {
