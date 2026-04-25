@@ -28,7 +28,7 @@ const plans = [
     border: "rgba(139,92,246,0.25)",
   },
   {
-    id: "business",
+    id: "erhverv",
     name: "Erhverv",
     price: "1.000",
     description: "Til større organisationer",
