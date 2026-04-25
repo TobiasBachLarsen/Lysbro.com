@@ -50,8 +50,7 @@ export default function DashboardPage() {
       if (!user) return;
       const { data } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
       if (data?.plan) {
-        const planMap: Record<string, PlanId> = { gratis: "gratis", pro: "pro", business: "erhverv" };
-        setCurrentPlanId(planMap[data.plan] ?? "gratis");
+        setCurrentPlanId((data.plan as PlanId) ?? "gratis");
       }
     });
   }, []);
