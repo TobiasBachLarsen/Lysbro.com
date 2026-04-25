@@ -73,8 +73,8 @@ export default function ProfilePage() {
       const { error: uploadError } = await supabase.storage.from("avatars").upload(path, avatarFile, { upsert: true });
       if (!uploadError) {
         const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-        finalAvatarUrl = `${publicUrl}?t=${Date.now()}`;
-        setAvatarUrl(finalAvatarUrl);
+        finalAvatarUrl = publicUrl;
+        setAvatarUrl(publicUrl);
         setAvatarFile(null);
       }
     }
@@ -123,7 +123,7 @@ export default function ProfilePage() {
               title="Skift profilbillede"
             >
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Profilbillede" className="h-full w-full object-cover" />
+                <img key={avatarUrl} src={avatarUrl} alt="Profilbillede" className="h-full w-full object-cover" crossOrigin="anonymous" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-2xl font-black text-white" style={{ background: avatarColors[selectedColor].value }}>
                   {initials}
