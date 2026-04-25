@@ -29,8 +29,8 @@ export default function ContactsPage() {
     });
   }, []);
   const [search, setSearch] = useState("");
-  const [inviting, setInviting] = useState<number | null>(null);
-  const [invited, setInvited] = useState<number[]>([]);
+  const [inviting, setInviting] = useState<string | null>(null);
+  const [invited, setInvited] = useState<string[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
@@ -40,7 +40,7 @@ export default function ContactsPage() {
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleInvite = (id: number) => {
+  const handleInvite = (id: string) => {
     setInviting(id);
     setTimeout(() => {
       setInviting(null);
