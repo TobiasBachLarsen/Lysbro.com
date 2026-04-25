@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/app/lib/supabase";
+import { AgoraIcon, AgoraLogoFull } from "@/app/components/AgoraLogo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,12 +43,17 @@ export default function LoginPage() {
           {/* Logo */}
           <Link href="/" className="mb-12 flex items-center gap-3 w-fit">
             <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)", boxShadow: "0 0 24px rgba(59,130,246,0.5)" }}>
-              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-              </svg>
+              <AgoraIcon className="h-6 w-6" />
             </div>
             <span className="text-2xl font-black tracking-tight text-white">Agora</span>
           </Link>
+
+          {/* Full compass logo */}
+          <div className="mb-10 flex justify-center">
+            <div className="h-36 w-36 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)", boxShadow: "0 0 60px rgba(59,130,246,0.35)" }}>
+              <AgoraLogoFull className="h-28 w-28" />
+            </div>
+          </div>
 
           <h2 className="text-4xl font-black text-white leading-tight mb-4">
             Europæiske videomøder.<br />
@@ -90,9 +96,7 @@ export default function LoginPage() {
           {/* Logo (mobile) */}
           <Link href="/" className="mb-8 flex items-center gap-2 lg:hidden">
             <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}>
-              <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-              </svg>
+              <AgoraIcon className="h-5 w-5" />
             </div>
             <span className="text-lg font-bold text-white">Agora</span>
           </Link>

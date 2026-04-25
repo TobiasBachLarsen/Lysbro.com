@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { PlanMeta } from "@/app/types";
 import { PLANS } from "@/app/lib/data";
 import { createClient } from "@/app/lib/supabase";
+import { AgoraIcon } from "@/app/components/AgoraLogo";
 
 // ── Icons ────────────────────────────────────────────────────────────────────
 
@@ -99,9 +100,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
           className="h-8 w-8 rounded-xl flex items-center justify-center"
           style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)", boxShadow: "0 0 16px rgba(59,130,246,0.4)" }}
         >
-          <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-          </svg>
+          <AgoraIcon className="h-5 w-5" />
         </div>
         <span className="text-lg font-black tracking-tight text-white">Agora</span>
 

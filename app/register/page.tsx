@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/app/lib/supabase";
+import { AgoraIcon } from "@/app/components/AgoraLogo";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -61,9 +62,7 @@ export default function RegisterPage() {
         <div className="relative z-10 max-w-md w-full">
           <Link href="/" className="mb-12 flex items-center gap-3 w-fit">
             <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)", boxShadow: "0 0 24px rgba(59,130,246,0.5)" }}>
-              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-              </svg>
+              <AgoraIcon className="h-6 w-6" />
             </div>
             <span className="text-2xl font-black tracking-tight text-white">Agora</span>
           </Link>
