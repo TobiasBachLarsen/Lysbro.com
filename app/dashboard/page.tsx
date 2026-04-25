@@ -39,15 +39,23 @@ export default function DashboardPage() {
   const [joinError, setJoinError]     = useState(false);
 
   const [upcomingMeetings, setUpcomingMeetings] = useState<{ id: string; title: string; date: string; time: string }[]>([]);
+  const [userName, setUserName] = useState("");
+  const [monthlyMeetings, setMonthlyMeetings] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
     const today = new Date().toISOString().slice(0, 10);
+    const firstOfMonth = today.slice(0, 7) + "-01";
     supabase.from("meetings").select("id, title, date, time").gte("date", today).order("date").limit(5).then(({ data }) => {
       setUpcomingMeetings(data ?? []);
     });
+    supabase.from("meetings").select("id", { count: "exact" }).gte("date", firstOfMonth).lte("date", today).then(({ count }) => {
+      setMonthlyMeetings(count ?? 0);
+    });
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
+      const name = user.user_metadata?.full_name ?? user.email ?? "";
+      setUserName(name.split(" ")[0]);
       const { data } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
       if (data?.plan) {
         setCurrentPlanId((data.plan as PlanId) ?? "gratis");
@@ -137,8 +145,8 @@ export default function DashboardPage() {
       {/* ── Topbar ── */}
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between px-8" style={{ background: "rgba(5,7,15,0.85)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div>
-          <h1 className="text-base font-semibold text-white">God dag 👋</h1>
-          <p className="text-xs" style={{ color: "#475569" }}>Torsdag, 24. april 2026</p>
+          <h1 className="text-base font-semibold text-white">God dag{userName ? `, ${userName}` : ""} 👋</h1>
+          <p className="text-xs" style={{ color: "#475569" }}>{new Date().toLocaleDateString("da-DK", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
         </div>
         <div className="flex gap-3">
           <button onClick={handleStartMeeting} disabled={starting} className="btn-gradient flex items-center gap-2 px-4 py-2 text-sm rounded-xl" style={{ opacity: starting ? 0.75 : 1 }}>
@@ -254,7 +262,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <p className="text-3xl font-black tracking-tight text-white">
-                {s.value ?? plan.label}
+                {s.label === "Møder denne måned" ? monthlyMeetings : s.value ?? plan.label}
               </p>
               <p className="mt-1 text-xs" style={{ color: "#64748b" }}>{s.label}</p>
               {s.trend && <p className="mt-2 text-xs font-medium" style={{ color: "#4ade80" }}>{s.trend}</p>}
