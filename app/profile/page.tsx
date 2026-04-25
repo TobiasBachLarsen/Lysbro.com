@@ -123,7 +123,7 @@ export default function ProfilePage() {
               title="Skift profilbillede"
             >
               {avatarUrl ? (
-                <img key={avatarUrl} src={avatarUrl} alt="Profilbillede" className="h-full w-full object-cover" crossOrigin="anonymous" />
+                <div className="h-full w-full bg-cover bg-center rounded-2xl" style={{ backgroundImage: `url(${avatarUrl})` }} />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-2xl font-black text-white" style={{ background: avatarColors[selectedColor].value }}>
                   {initials}
