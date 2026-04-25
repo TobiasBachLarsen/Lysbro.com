@@ -11,10 +11,10 @@ import type { PlanId } from "@/app/types";
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
 const STATS = [
-  { label: "Møder denne måned", value: "2",   iconBg: "rgba(59,130,246,0.15)",  iconColor: "#60a5fa", trend: "+2 fra sidst",  icon: <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg> },
-  { label: "Deltagere i alt",    value: "34",  iconBg: "rgba(139,92,246,0.15)", iconColor: "#a78bfa", trend: "+12 fra sidst", icon: <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg> },
-  { label: "Mødetimer",          value: "5,2", iconBg: "rgba(6,182,212,0.15)",  iconColor: "#22d3ee", trend: "+1.4t fra sidst", icon: <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> },
-  { label: "Nuværende plan",     value: null,  iconBg: "rgba(245,158,11,0.15)", iconColor: "#fbbf24", trend: null, icon: <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg> },
+  { label: "Møder denne måned",  value: "månedlig",  iconBg: "rgba(59,130,246,0.15)",  iconColor: "#60a5fa", trend: null, icon: <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg> },
+  { label: "Kommende møder",     value: "kommende",  iconBg: "rgba(139,92,246,0.15)", iconColor: "#a78bfa", trend: null, icon: <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg> },
+  { label: "Møder i alt",        value: "total",     iconBg: "rgba(6,182,212,0.15)",  iconColor: "#22d3ee", trend: null, icon: <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> },
+  { label: "Nuværende plan",     value: null,        iconBg: "rgba(245,158,11,0.15)", iconColor: "#fbbf24", trend: null, icon: <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg> },
 ];
 
 const QUICK_ACTIONS = [
@@ -39,15 +39,27 @@ export default function DashboardPage() {
   const [joinError, setJoinError]     = useState(false);
 
   const [upcomingMeetings, setUpcomingMeetings] = useState<{ id: string; title: string; date: string; time: string }[]>([]);
+  const [userName, setUserName] = useState("");
+  const [monthlyMeetings, setMonthlyMeetings] = useState(0);
+  const [totalMeetings, setTotalMeetings] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
     const today = new Date().toISOString().slice(0, 10);
+    const firstOfMonth = today.slice(0, 7) + "-01";
     supabase.from("meetings").select("id, title, date, time").gte("date", today).order("date").limit(5).then(({ data }) => {
       setUpcomingMeetings(data ?? []);
     });
+    supabase.from("meetings").select("id", { count: "exact" }).gte("date", firstOfMonth).lte("date", today).then(({ count }) => {
+      setMonthlyMeetings(count ?? 0);
+    });
+    supabase.from("meetings").select("id", { count: "exact" }).then(({ count }) => {
+      setTotalMeetings(count ?? 0);
+    });
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
+      const name = user.user_metadata?.full_name ?? user.email ?? "";
+      setUserName(name.split(" ")[0]);
       const { data } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
       if (data?.plan) {
         setCurrentPlanId((data.plan as PlanId) ?? "gratis");
@@ -137,8 +149,8 @@ export default function DashboardPage() {
       {/* ── Topbar ── */}
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between px-8" style={{ background: "rgba(5,7,15,0.85)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div>
-          <h1 className="text-base font-semibold text-white">God dag 👋</h1>
-          <p className="text-xs" style={{ color: "#475569" }}>Torsdag, 24. april 2026</p>
+          <h1 className="text-base font-semibold text-white">God dag{userName ? `, ${userName}` : ""} 👋</h1>
+          <p className="text-xs" style={{ color: "#475569" }}>{new Date().toLocaleDateString("da-DK", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
         </div>
         <div className="flex gap-3">
           <button onClick={handleStartMeeting} disabled={starting} className="btn-gradient flex items-center gap-2 px-4 py-2 text-sm rounded-xl" style={{ opacity: starting ? 0.75 : 1 }}>
@@ -254,7 +266,10 @@ export default function DashboardPage() {
                 </div>
               </div>
               <p className="text-3xl font-black tracking-tight text-white">
-                {s.value ?? plan.label}
+                {s.label === "Møder denne måned" ? monthlyMeetings
+                  : s.label === "Kommende møder" ? upcomingMeetings.length
+                  : s.label === "Møder i alt" ? totalMeetings
+                  : plan.label}
               </p>
               <p className="mt-1 text-xs" style={{ color: "#64748b" }}>{s.label}</p>
               {s.trend && <p className="mt-2 text-xs font-medium" style={{ color: "#4ade80" }}>{s.trend}</p>}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PlanMeta } from "@/app/types";
+import { PLANS } from "@/app/lib/data";
 import { createClient } from "@/app/lib/supabase";
 
 // ── Icons ────────────────────────────────────────────────────────────────────
@@ -42,20 +43,25 @@ interface SidebarProps {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function Sidebar({ activeHref, plan, extra, mobileOpen = false, onMobileClose }: SidebarProps) {
+export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen = false, onMobileClose }: SidebarProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [userInitials, setUserInitials] = useState("?");
+  const [plan, setPlan] = useState<PlanMeta>(planProp ?? PLANS.gratis);
   const unread = NOTIFICATIONS.filter((n) => !n.read).length;
   const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (user) {
         setUserEmail(user.email ?? "");
         const name = user.user_metadata?.full_name ?? user.email ?? "";
         setUserInitials(name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2));
+        const { data } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
+        if (data?.plan && PLANS[data.plan as keyof typeof PLANS]) {
+          setPlan(PLANS[data.plan as keyof typeof PLANS]);
+        }
       }
     });
   }, []);
