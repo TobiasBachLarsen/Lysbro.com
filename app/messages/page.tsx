@@ -48,19 +48,16 @@ export default function MessagesPage() {
 
       const { data: rows } = await supabase
         .from("contacts")
-        .select("contact_id, profiles!contacts_contact_id_fkey(id, full_name)")
+        .select("id, name")
         .eq("user_id", user.id);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const list: Contact[] = (rows ?? []).map((r: any, i: number) => {
-        const profile = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
-        return {
-          id: r.contact_id,
-          name: profile?.full_name ?? r.contact_id,
-          initials: initials(profile?.full_name ?? "?"),
-          color: colors[i % colors.length],
-        };
-      });
+      const list: Contact[] = (rows ?? []).map((r: any, i: number) => ({
+        id: r.id,
+        name: r.name ?? r.id,
+        initials: initials(r.name ?? "?"),
+        color: colors[i % colors.length],
+      }));
       setContacts(list);
 
       // Load last message per contact
