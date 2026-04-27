@@ -48,16 +48,27 @@ export default function MessagesPage() {
 
       const { data: rows } = await supabase
         .from("contacts")
-        .select("id, name")
+        .select("id, name, email")
         .eq("user_id", user.id);
 
+      const emails = (rows ?? []).map((r: any) => r.email).filter(Boolean);
+      const { data: profiles } = emails.length
+        ? await supabase.from("profiles").select("id, email").in("email", emails)
+        : { data: [] };
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const list: Contact[] = (rows ?? []).map((r: any, i: number) => ({
-        id: r.id,
-        name: r.name ?? r.id,
-        initials: initials(r.name ?? "?"),
-        color: colors[i % colors.length],
-      }));
+      const list: Contact[] = (rows ?? [])
+        .map((r: any, i: number) => {
+          const profile = (profiles ?? []).find((p: any) => p.email === r.email);
+          if (!profile) return null;
+          return {
+            id: profile.id,
+            name: r.name ?? r.email,
+            initials: initials(r.name ?? "?"),
+            color: colors[i % colors.length],
+          };
+        })
+        .filter(Boolean) as Contact[];
       setContacts(list);
 
       // Load last message per contact
@@ -129,7 +140,8 @@ export default function MessagesPage() {
     const supabase = createClient();
     const content = input.trim();
     setInput("");
-    await supabase.from("messages").insert({ sender_id: userId, receiver_id: selected.id, content });
+    const { error } = await supabase.from("messages").insert({ sender_id: userId, receiver_id: selected.id, content });
+    if (error) console.error("[messages] send error:", error);
     setSending(false);
   };
 
