@@ -18,12 +18,14 @@ const Icons = {
   history:      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>,
   subscription: <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>,
   profile:      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>,
+  messages:     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>,
 };
 
 const NAV_LINKS = [
   { href: "/profile",      label: "Profil",      icon: "profile"      },
   { href: "/dashboard",    label: "Overblik",    icon: "dashboard"    },
   { href: "/meetings",     label: "Møder",       icon: "meetings"     },
+  { href: "/messages",     label: "Beskeder",    icon: "messages"     },
   { href: "/calendar",     label: "Kalender",    icon: "calendar"     },
   { href: "/contacts",     label: "Kontakter",   icon: "contacts"     },
   { href: "/history",      label: "Historik",    icon: "history"      },
@@ -51,6 +53,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   const [plan, setPlan] = useState<PlanMeta>(planProp ?? PLANS.gratis);
   const [notifications] = useState<Notif[]>([]);
   const [pendingRequests, setPendingRequests] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const unread = notifications.filter((n) => !n.read).length;
   const router = useRouter();
@@ -72,6 +75,10 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
       const { count } = await supabase.from("contact_requests")
         .select("id", { count: "exact" }).eq("receiver_id", user.id).eq("status", "pending");
       setPendingRequests(count ?? 0);
+
+      const { count: msgCount } = await supabase.from("messages")
+        .select("id", { count: "exact" }).eq("receiver_id", user.id).eq("read", false);
+      setUnreadMessages(msgCount ?? 0);
 
       const { data: files } = await supabase.storage.from("avatars").list(user.id);
       if (files && files.length > 0) {
@@ -155,6 +162,11 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
               {href === "/contacts" && pendingRequests > 0 && (
                 <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "#3b82f6" }}>
                   {pendingRequests}
+                </span>
+              )}
+              {href === "/messages" && unreadMessages > 0 && (
+                <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "#3b82f6" }}>
+                  {unreadMessages}
                 </span>
               )}
             </Link>
