@@ -10,7 +10,7 @@ const plans = [
     price: "0",
     priceLabel: "gratis",
     description: "Til enkeltpersoner og studerende",
-    features: ["3 møder pr. måned", "Op til 5 deltagere", "Krypterede møder", "Europæisk hosting", "Annoncer under møder"],
+    features: ["2 møder pr. måned", "Op til 2 deltagere", "Krypterede møder", "Europæisk hosting", "Annoncer under møder"],
     note: null,
     cta: "Opret gratis konto",
     href: "/register",
@@ -18,7 +18,7 @@ const plans = [
   },
   {
     name: "Professionel",
-    price: "200",
+    price: "249",
     priceLabel: "kr./md.",
     description: "Til freelancere og små teams",
     features: ["Ubegrænsede møder", "Op til 25 deltagere", "Ingen reklamer", "Mødeoptagelse (30 dage)", "Kalenderintegration", "E-mail invitationer"],
@@ -29,7 +29,7 @@ const plans = [
   },
   {
     name: "Erhverv",
-    price: "1.000",
+    price: "1.499",
     priceLabel: "kr./md.",
     description: "Til organisationer med høje krav",
     features: ["Ubegrænsede møder", "100+ deltagere", "Ingen reklamer", "GDPR-databehandleraftale", "SSO / SAML-login", "Admin-dashboard & SLA"],
@@ -93,7 +93,7 @@ const comparisonRows = [
   { feature: "End-to-end kryptering",   agora: true,  zoom: null,  teams: false },
   { feature: "Gratis plan",             agora: true,  zoom: true,  teams: true  },
   { feature: "Ingen reklamer (gratis)", agora: false, zoom: false, teams: true  },
-  { feature: "Ingen installation",      agora: true,  zoom: false, teams: false },
+  { feature: "Ingen datadeling med tredjeparter", agora: true, zoom: false, teams: false },
 ];
 
 const avatars = ["M", "L", "K", "S", "A"];

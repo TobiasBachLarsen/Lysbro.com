@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import AppLayout from "@/app/components/AppLayout";
 import { createClient } from "@/app/lib/supabase";
+import { getInitials } from "@/app/lib/utils";
 
 const avatarColors = [
   { label: "Blå", value: "linear-gradient(135deg, #3b82f6, #06b6d4)" },
@@ -59,7 +60,7 @@ export default function ProfilePage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const initials = name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+  const initials = getInitials(name);
 
   const handleSaveProfile = async () => {
     setSavingProfile(true);

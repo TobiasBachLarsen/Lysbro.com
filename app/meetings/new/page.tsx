@@ -28,16 +28,35 @@ export default function NewMeetingPage() {
     setIsLoading(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("meetings").insert({
-      user_id: user?.id,
+    if (!user) { setIsLoading(false); return; }
+
+    const { data: meeting, error } = await supabase.from("meetings").insert({
+      user_id: user.id,
       title: form.title,
       date: form.date,
       time: form.time,
       duration: form.duration ? `${form.duration} min` : null,
       description: form.description || null,
-    });
+    }).select("id").single();
+
+    if (error) { setIsLoading(false); alert("Fejl: " + error.message); return; }
+
+    // Send mødeinvitation via beskeder til alle inviterede e-mails
+    const emails = form.invites.split("\n").map((e) => e.trim()).filter((e) => e.includes("@"));
+    if (emails.length > 0) {
+      const { data: profiles } = await supabase.from("profiles").select("id, email").in("email", emails);
+      const invites = (profiles ?? []).map((p: { id: string; email: string }) => ({
+        sender_id: user.id,
+        receiver_id: p.id,
+        content: `Mødeindvitation: ${form.title}`,
+        type: "meeting_invite",
+        meeting_data: { title: form.title, date: form.date, time: form.time, meeting_id: meeting?.id },
+        invite_status: "pending",
+      }));
+      if (invites.length > 0) await supabase.from("messages").insert(invites);
+    }
+
     setIsLoading(false);
-    if (error) { alert("Fejl: " + error.message); return; }
     setSent(true);
     setTimeout(() => router.push("/meetings"), 2000);
   };

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PlanMeta } from "@/app/types";
-import { PLANS } from "@/app/lib/data";
+import { PLANS, BANNER_ADS } from "@/app/lib/data";
 import { createClient } from "@/app/lib/supabase";
 import { AgoraIcon } from "@/app/components/AgoraLogo";
 
@@ -48,10 +48,11 @@ interface SidebarProps {
 
 export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen = false, onMobileClose }: SidebarProps) {
   const [notifOpen, setNotifOpen] = useState(false);
+  const [sidebarAdIdx, setSidebarAdIdx] = useState(1);
   const [userEmail, setUserEmail] = useState("");
   const [userInitials, setUserInitials] = useState("?");
   const [plan, setPlan] = useState<PlanMeta>(planProp ?? PLANS.gratis);
-  const [notifications] = useState<Notif[]>([]);
+  const [notifications, setNotifications] = useState<Notif[]>([]);
   const [pendingRequests, setPendingRequests] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -72,9 +73,37 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         setPlan(PLANS[data.plan as keyof typeof PLANS]);
       }
 
-      const { count } = await supabase.from("contact_requests")
-        .select("id", { count: "exact" }).eq("receiver_id", user.id).eq("status", "pending");
-      setPendingRequests(count ?? 0);
+      const { data: contactReqs, count: reqCount } = await supabase.from("contact_requests")
+        .select("id, sender_id", { count: "exact" }).eq("receiver_id", user.id).eq("status", "pending");
+      setPendingRequests(reqCount ?? 0);
+
+      const senderIds = (contactReqs ?? []).map((r: any) => r.sender_id);
+      const { data: senderProfiles } = senderIds.length
+        ? await supabase.from("profiles").select("id, full_name").in("id", senderIds)
+        : { data: [] };
+
+      const { data: inviteMsgs } = await supabase.from("messages")
+        .select("id, sender_id, meeting_data")
+        .eq("receiver_id", user.id)
+        .eq("type", "meeting_invite")
+        .eq("invite_status", "pending");
+
+      const inviteSenderIds = (inviteMsgs ?? []).map((m: any) => m.sender_id);
+      const { data: inviteSenders } = inviteSenderIds.length
+        ? await supabase.from("profiles").select("id, full_name").in("id", inviteSenderIds)
+        : { data: [] };
+
+      const notifs: Notif[] = [
+        ...(contactReqs ?? []).map((r: any) => {
+          const p = (senderProfiles ?? []).find((p: any) => p.id === r.sender_id);
+          return { id: r.id, text: "Ny kontaktanmodning", sub: p?.full_name ?? "Ukendt bruger", color: "#3b82f6", read: false };
+        }),
+        ...(inviteMsgs ?? []).map((m: any) => {
+          const p = (inviteSenders ?? []).find((p: any) => p.id === m.sender_id);
+          return { id: m.id, text: `Mødeindvitation: ${m.meeting_data?.title ?? "Møde"}`, sub: `Fra ${p?.full_name ?? "Ukendt"}`, color: "#a78bfa", read: false };
+        }),
+      ];
+      setNotifications(notifs);
 
       const { count: msgCount } = await supabase.from("messages")
         .select("id", { count: "exact" }).eq("receiver_id", user.id).eq("read", false);
@@ -89,6 +118,12 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
 
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (plan.id !== "gratis") return;
+    const id = setInterval(() => setSidebarAdIdx((i) => (i + 1) % BANNER_ADS.length), 60_000);
+    return () => clearInterval(id);
+  }, [plan.id]);
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -128,7 +163,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+      <nav className="p-4 space-y-1">
         {NAV_LINKS.map(({ href, label, icon }) => {
           const active = href === activeHref;
           return (
@@ -173,6 +208,26 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
           );
         })}
       </nav>
+
+      {/* Sidebar-reklame */}
+      {plan.id === "gratis" && (() => {
+        const sa = BANNER_ADS[sidebarAdIdx];
+        return (
+          <div className="mx-3 mb-3 rounded-2xl overflow-hidden" style={{ background: sa.bg, border: `1px solid ${sa.border}` }}>
+            <div className="px-3 py-1.5 flex items-center justify-between" style={{ background: "rgba(0,0,0,0.2)", borderBottom: `1px solid ${sa.border}` }}>
+              <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: "#334155" }}>Annonce</span>
+              <Link href="/subscription" onClick={onMobileClose} className="text-[9px] font-semibold" style={{ color: "#475569" }}>Fjern →</Link>
+            </div>
+            <div className="p-3 text-center">
+              <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl text-lg font-black text-white" style={{ background: sa.color, boxShadow: `0 4px 16px ${sa.border}` }}>{sa.logo}</div>
+              <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: sa.color }}>{sa.brand}</p>
+              <p className="text-xs font-semibold text-white leading-tight mb-1">{sa.headline}</p>
+              <p className="text-[10px] mb-2.5" style={{ color: "#64748b" }}>{sa.sub}</p>
+              <button className="w-full rounded-xl py-2 text-[11px] font-bold text-white" style={{ background: sa.color, boxShadow: `0 4px 12px ${sa.border}` }}>Læs mere →</button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Bottom */}
       <div className="p-4 space-y-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
@@ -255,19 +310,23 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
                   <p className="text-xs" style={{ color: "#334155" }}>Ingen notifikationer</p>
                 </div>
               )}
-              {notifications.map((n) => (
-                <div key={n.id} className="flex items-start gap-3 px-4 py-3 transition-all"
-                  style={{ opacity: n.read ? 0.5 : 1, borderBottom: "1px solid rgba(255,255,255,0.04)" }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)")}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
-                >
-                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: n.color }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white leading-tight">{n.text}</p>
-                    <p className="text-xs mt-0.5" style={{ color: "#475569" }}>{n.sub}</p>
-                  </div>
-                </div>
-              ))}
+              {notifications.map((n) => {
+                const href = n.color === "#3b82f6" ? "/contacts" : "/messages";
+                return (
+                  <Link key={n.id} href={href} onClick={() => { onMobileClose?.(); setNotifOpen(false); }}
+                    className="flex items-start gap-3 px-4 py-3 transition-all"
+                    style={{ opacity: n.read ? 0.5 : 1, borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.03)")}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = "transparent")}
+                  >
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: n.color }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-white leading-tight">{n.text}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "#475569" }}>{n.sub}</p>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>

@@ -4,7 +4,18 @@ import { useState, useEffect } from "react";
 import AppLayout from "@/app/components/AppLayout";
 import { createClient } from "@/app/lib/supabase";
 
-type Meeting = { id: string; title: string; date: string; time: string; duration: string };
+type Meeting = { id: string; title: string; date: string; time: string; duration: string | null };
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("da-DK", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function totalMinutes(meetings: Meeting[]) {
+  return meetings.reduce((sum, m) => {
+    const n = parseInt(m.duration ?? "0");
+    return sum + (isNaN(n) ? 0 : n);
+  }, 0);
+}
 
 export default function HistoryPage() {
   const [historyMeetings, setHistoryMeetings] = useState<Meeting[]>([]);
@@ -13,7 +24,14 @@ export default function HistoryPage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.from("meetings").select("id, title, date, time, duration").lt("date", today).order("date", { ascending: false }).then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("meetings")
+        .select("id, title, date, time, duration")
+        .eq("user_id", user.id)
+        .lt("date", today)
+        .order("date", { ascending: false });
       setHistoryMeetings(data ?? []);
       setLoading(false);
     });
@@ -34,6 +52,22 @@ export default function HistoryPage() {
       </header>
 
       <main className="p-8 space-y-8">
+
+        {/* Stats */}
+        {!loading && (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            {[
+              { label: "Afholdte møder", value: historyMeetings.length, color: "#60a5fa", bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.2)" },
+              { label: "Timer i møder", value: `${Math.floor(totalMinutes(historyMeetings) / 60)}t ${totalMinutes(historyMeetings) % 60}m`, color: "#a78bfa", bg: "rgba(139,92,246,0.08)", border: "rgba(139,92,246,0.2)" },
+              { label: "Seneste møde", value: historyMeetings[0] ? formatDate(historyMeetings[0].date) : "—", color: "#22d3ee", bg: "rgba(6,182,212,0.08)", border: "rgba(6,182,212,0.2)" },
+            ].map(({ label, value, color, bg, border }) => (
+              <div key={label} className="rounded-2xl p-5" style={{ background: bg, border: `1px solid ${border}` }}>
+                <p className="text-xs font-semibold mb-1" style={{ color }}>{label}</p>
+                <p className="text-2xl font-black text-white">{value}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* History table */}
         <div>
@@ -74,7 +108,7 @@ export default function HistoryPage() {
                     </div>
                     <span className="text-sm font-semibold text-white truncate">{m.title}</span>
                   </div>
-                  <span className="text-sm" style={{ color: "#64748b" }}>{m.date}</span>
+                  <span className="text-sm" style={{ color: "#64748b" }}>{formatDate(m.date)}</span>
                   <span className="text-sm" style={{ color: "#64748b" }}>{m.time}</span>
                   <div>
                     <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.06)", color: "#64748b" }}>
