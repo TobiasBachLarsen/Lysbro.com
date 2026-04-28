@@ -117,7 +117,7 @@ export default function ContactsPage() {
     if (error) return;
     setRequests((prev) => prev.filter((r) => r.id !== req.id));
     setContacts((prev) => [...prev, {
-      id: req.sender_id, name: req.sender_name, email: req.sender_email,
+      id: req.sender_id, profile_id: req.sender_id, name: req.sender_name, email: req.sender_email,
       initials: getInitials(req.sender_name), color: AVATAR_COLORS[prev.length % AVATAR_COLORS.length],
       avatar_url: req.sender_avatar,
     }]);
