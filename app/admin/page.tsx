@@ -9,7 +9,7 @@ import { getInitials, AVATAR_COLORS } from "@/app/lib/utils";
 type Member = { id: string; user_id: string; role: string; name: string; email: string; avatar_url: string | null; meetings: number; joinedAt: string };
 type UpcomingMeeting = { id: string; title: string; date: string; time: string; duration: string | null; ownerName: string };
 type PastMeeting = { id: string; title: string; date: string; time: string; duration: string | null; ownerName: string };
-type Announcement = { id: string; content: string; authorName: string; created_at: string };
+type Announcement = { id: string; content: string; authorName: string; authorAvatar: string | null; created_at: string };
 type MonthBar = { label: string; count: number };
 
 const FREE_SEATS = 5;
@@ -95,7 +95,7 @@ export default function AdminPage() {
   const [createError, setCreateError] = useState("");
   const [orgName, setOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteSearch, setInviteSearch] = useState<{ id: string; full_name: string; email: string }[]>([]);
+  const [inviteSearch, setInviteSearch] = useState<{ id: string; full_name: string; email: string; avatar_url: string | null }[]>([]);
   const [inviting, setInviting] = useState(false);
   const [inviteDone, setInviteDone] = useState("");
   const [renaming, setRenaming] = useState(false);
@@ -115,8 +115,8 @@ export default function AdminPage() {
       .channel(`org-announcements-${org.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_announcements", filter: `org_id=eq.${org.id}` }, async (payload) => {
         const a = payload.new as any;
-        const { data: p } = await supabase.from("profiles").select("full_name, email").eq("id", a.author_id).single();
-        const newAnn: Announcement = { id: a.id, content: a.content, authorName: p?.full_name ?? p?.email ?? "Ukendt", created_at: a.created_at };
+        const { data: p } = await supabase.from("profiles").select("full_name, email, avatar_url").eq("id", a.author_id).single();
+        const newAnn: Announcement = { id: a.id, content: a.content, authorName: p?.full_name ?? p?.email ?? "Ukendt", authorAvatar: p?.avatar_url ?? null, created_at: a.created_at };
         setAnnouncements((prev) => [newAnn, ...prev]);
       })
       .subscribe();
@@ -233,12 +233,12 @@ export default function AdminPage() {
 
     const authorIds = [...new Set((annRows ?? []).map((a: any) => a.author_id))];
     const { data: authorProfiles } = authorIds.length
-      ? await supabase.from("profiles").select("id, full_name, email").in("id", authorIds)
+      ? await supabase.from("profiles").select("id, full_name, email, avatar_url").in("id", authorIds)
       : { data: [] };
 
     setAnnouncements((annRows ?? []).map((a: any) => {
       const ap = (authorProfiles ?? []).find((p: any) => p.id === a.author_id);
-      return { id: a.id, content: a.content, authorName: ap?.full_name ?? ap?.email ?? "Ukendt", created_at: a.created_at };
+      return { id: a.id, content: a.content, authorName: ap?.full_name ?? ap?.email ?? "Ukendt", authorAvatar: ap?.avatar_url ?? null, created_at: a.created_at };
     }));
 
     setLoading(false);
@@ -286,7 +286,7 @@ export default function AdminPage() {
     setInviteEmail(q);
     if (q.length < 2) { setInviteSearch([]); return; }
     const supabase = createClient();
-    const { data } = await supabase.from("profiles").select("id, full_name, email")
+    const { data } = await supabase.from("profiles").select("id, full_name, email, avatar_url")
       .or(`email.ilike.%${q}%,full_name.ilike.%${q}%`).limit(5);
     setInviteSearch((data ?? []).filter((u: any) => !members.find(m => m.user_id === u.id)));
   };
@@ -545,8 +545,8 @@ export default function AdminPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, #8b5cf6, #06b6d4)" }}>
-                            {getInitials(a.authorName)}
+                          <div className="h-6 w-6 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, #8b5cf6, #06b6d4)" }}>
+                            {a.authorAvatar ? <img src={a.authorAvatar} alt={a.authorName} className="h-full w-full object-cover" /> : getInitials(a.authorName)}
                           </div>
                           <span className="text-xs font-semibold text-white">{a.authorName}</span>
                           <span className="text-xs" style={{ color: "#334155" }}>· {timeAgo(a.created_at)}</span>
@@ -640,8 +640,8 @@ export default function AdminPage() {
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.06] transition-all"
                         style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
                       >
-                        <div className="h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, #8b5cf6, #ec4899)" }}>
-                          {getInitials(u.full_name || u.email)}
+                        <div className="h-8 w-8 rounded-lg overflow-hidden flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, #8b5cf6, #ec4899)" }}>
+                          {u.avatar_url ? <img src={u.avatar_url} alt={u.full_name || u.email} className="h-full w-full object-cover" /> : getInitials(u.full_name || u.email)}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-white truncate">{u.full_name || "Unavngivet"}</p>

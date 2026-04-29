@@ -57,6 +57,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   const [pendingRequests, setPendingRequests] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [orgNewCount, setOrgNewCount] = useState(0);
   const unread = notifications.filter((n) => !n.read).length;
   const router = useRouter();
 
@@ -131,21 +132,22 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
       setIsAdmin(membership?.role === "admin");
 
       if (membership?.org_id) {
-        const { data: latestAnn } = await supabase.from("org_announcements")
+        const seenAt = typeof window !== "undefined" ? localStorage.getItem("announcements_seen_at") : null;
+        const { data: newAnns } = await supabase.from("org_announcements")
           .select("id, content, created_at")
           .eq("org_id", membership.org_id)
           .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (latestAnn) {
-          const seenAt = typeof window !== "undefined" ? localStorage.getItem("announcements_seen_at") : null;
-          const isNew = !seenAt || new Date(latestAnn.created_at) > new Date(seenAt);
-          if (isNew) {
-            setNotifications((prev) => [
-              ...prev,
-              { id: `ann-${latestAnn.id}`, text: "Nyt opslag i organisationen", sub: latestAnn.content.slice(0, 50), color: "#f59e0b", read: false },
-            ]);
-          }
+          .limit(10);
+
+        const unseen = (newAnns ?? []).filter(a => !seenAt || new Date(a.created_at) > new Date(seenAt));
+        setOrgNewCount(unseen.length);
+
+        if (unseen.length > 0) {
+          const latest = unseen[0];
+          setNotifications((prev) => [
+            ...prev,
+            { id: `ann-${latest.id}`, text: `${unseen.length > 1 ? `${unseen.length} nye opslag` : "Nyt opslag"} i organisationen`, sub: latest.content.slice(0, 50), color: "#f59e0b", read: false },
+          ]);
         }
       }
     });
@@ -254,10 +256,13 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
               onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLAnchorElement).style.color = "#94a3b8"; } }}
               onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "#64748b"; } }}
             >
-              <span style={{ color: active ? "#a78bfa" : "inherit" }}>
+              <span className="relative" style={{ color: active ? "#a78bfa" : "inherit" }}>
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/></svg>
               </span>
               Organisation
+              {orgNewCount > 0 && !active && (
+                <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "#3b82f6" }}>{orgNewCount}</span>
+              )}
             </Link>
           );
         })()}
