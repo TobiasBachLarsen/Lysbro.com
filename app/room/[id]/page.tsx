@@ -342,7 +342,7 @@ export default function RoomPage() {
 
       {/* Jitsi iframe */}
       <iframe
-        src={`https://meet.jit.si/${roomName}`}
+        src={`https://meet.lysbro.com/${roomName}`}
         allow="camera; microphone; fullscreen; display-capture; autoplay"
         className="w-full flex-1"
         style={{ border: "none" }}
