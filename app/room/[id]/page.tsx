@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Script from "next/script";
+import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
 import { createClient } from "@/app/lib/supabase";
 import { AgoraIcon } from "@/app/components/AgoraLogo";
@@ -17,6 +19,7 @@ type LobbyEntry = {
 
 export default function RoomPage() {
   const params = useParams();
+  const router = useRouter();
   const id = (params?.id as string) ?? "demo";
   const roomName = `agora-${id}-room`;
 
@@ -28,6 +31,9 @@ export default function RoomPage() {
   const [showPanel, setShowPanel] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [jitsiToken, setJitsiToken] = useState<string | null>(null);
+  const [apiReady, setApiReady] = useState(false);
+  const jitsiContainerRef = useRef<HTMLDivElement>(null);
+  const jitsiApiRef = useRef<unknown>(null);
   const channelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
 
   // Check if current user is the host
