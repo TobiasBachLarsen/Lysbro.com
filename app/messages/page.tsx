@@ -190,23 +190,37 @@ export default function MessagesPage() {
             ) : contacts.map((c) => {
               const last = lastMessages[c.id];
               const isActive = selected?.id === c.id;
+              const hasUnread = !isActive && last && !last.read && last.sender_id !== userId;
               return (
                 <button
                   key={c.id}
                   onClick={() => { setSelected(c); setMessages([]); }}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all relative"
                   style={{
-                    background: isActive ? "rgba(59,130,246,0.08)" : "transparent",
-                    borderLeft: isActive ? "2px solid #3b82f6" : "2px solid transparent",
+                    background: isActive
+                      ? "rgba(59,130,246,0.08)"
+                      : hasUnread
+                      ? "rgba(139,92,246,0.06)"
+                      : "transparent",
+                    borderLeft: isActive
+                      ? "2px solid #3b82f6"
+                      : hasUnread
+                      ? "2px solid #a78bfa"
+                      : "2px solid transparent",
                   }}
                 >
-                  <Avatar contact={c} size={10} />
+                  <div className="relative shrink-0">
+                    <Avatar contact={c} size={10} />
+                    {hasUnread && (
+                      <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full border-2 flex items-center justify-center" style={{ background: "#a78bfa", borderColor: "#080b18" }} />
+                    )}
+                  </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-white truncate">{c.name}</p>
-                      {last && <p className="text-[10px] shrink-0 ml-2" style={{ color: "#334155" }}>{formatTime(last.created_at)}</p>}
+                      <p className={`text-sm truncate ${hasUnread ? "font-bold text-white" : "font-semibold text-white"}`}>{c.name}</p>
+                      {last && <p className="text-[10px] shrink-0 ml-2" style={{ color: hasUnread ? "#a78bfa" : "#334155" }}>{formatTime(last.created_at)}</p>}
                     </div>
-                    <p className="text-xs truncate mt-0.5" style={{ color: "#475569" }}>
+                    <p className="text-xs truncate mt-0.5" style={{ color: hasUnread ? "#94a3b8" : "#475569", fontWeight: hasUnread ? 500 : 400 }}>
                       {last ? (last.sender_id === userId ? `Du: ${last.content}` : last.content) : "Ingen beskeder endnu"}
                     </p>
                   </div>

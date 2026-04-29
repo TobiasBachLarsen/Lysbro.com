@@ -11,6 +11,7 @@ type UpcomingMeeting = { id: string; title: string; date: string; time: string; 
 type PastMeeting = { id: string; title: string; date: string; time: string; duration: string | null; ownerName: string };
 type Announcement = { id: string; content: string; authorName: string; authorAvatar: string | null; created_at: string };
 type MonthBar = { label: string; key: string; count: number };
+type OrgMessage = { id: string; sender_id: string; senderName: string; senderAvatar: string | null; content: string; created_at: string };
 
 const FREE_SEATS = 5;
 const EXTRA_SEAT_PRICE = 99;
@@ -101,11 +102,38 @@ export default function AdminPage() {
   const [renaming, setRenaming] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
   const [renameLoading, setRenameLoading] = useState(false);
-  const [tab, setTab] = useState<"oversigt" | "opslagstavle" | "historik" | "medlemmer" | "indstillinger">("oversigt");
+  const [tab, setTab] = useState<"oversigt" | "opslagstavle" | "historik" | "beskeder" | "medlemmer" | "indstillinger">("oversigt");
 
+  const [orgMessages, setOrgMessages] = useState<OrgMessage[]>([]);
+  const [orgMsgInput, setOrgMsgInput] = useState("");
+  const [sendingOrgMsg, setSendingOrgMsg] = useState(false);
+  const orgMsgBottomRef = useRef<HTMLDivElement>(null);
   const annChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
+  const orgMsgChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
 
   useEffect(() => { loadData(); }, []);
+
+  useEffect(() => {
+    if (!org?.id) return;
+    const supabase = createClient();
+    if (orgMsgChannelRef.current) supabase.removeChannel(orgMsgChannelRef.current);
+    const ch = supabase
+      .channel(`org-messages-${org.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_messages" }, async (payload) => {
+        const m = payload.new as any;
+        if (m.org_id !== org.id) return;
+        const { data: p } = await supabase.from("profiles").select("full_name, email, avatar_url").eq("id", m.sender_id).single();
+        const newMsg: OrgMessage = { id: m.id, sender_id: m.sender_id, senderName: p?.full_name ?? p?.email ?? "Ukendt", senderAvatar: p?.avatar_url ?? null, content: m.content, created_at: m.created_at };
+        setOrgMessages((prev) => [...prev, newMsg]);
+      })
+      .subscribe();
+    orgMsgChannelRef.current = ch;
+    return () => { supabase.removeChannel(ch); };
+  }, [org?.id]);
+
+  useEffect(() => {
+    orgMsgBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [orgMessages]);
 
   useEffect(() => {
     if (!org) return;
@@ -241,6 +269,23 @@ export default function AdminPage() {
       return { id: a.id, content: a.content, authorName: ap?.full_name ?? ap?.email ?? "Ukendt", authorAvatar: ap?.avatar_url ?? null, created_at: a.created_at };
     }));
 
+    // Org-gruppechat beskeder
+    const { data: orgMsgRows } = await supabase.from("org_messages")
+      .select("id, sender_id, content, created_at")
+      .eq("org_id", membership.org_id)
+      .order("created_at", { ascending: true })
+      .limit(100);
+
+    const msgSenderIds = [...new Set((orgMsgRows ?? []).map((m: any) => m.sender_id))];
+    const { data: msgSenderProfiles } = msgSenderIds.length
+      ? await supabase.from("profiles").select("id, full_name, email, avatar_url").in("id", msgSenderIds)
+      : { data: [] };
+
+    setOrgMessages((orgMsgRows ?? []).map((m: any) => {
+      const p = (msgSenderProfiles ?? []).find((p: any) => p.id === m.sender_id);
+      return { id: m.id, sender_id: m.sender_id, senderName: p?.full_name ?? p?.email ?? "Ukendt", senderAvatar: p?.avatar_url ?? null, content: m.content, created_at: m.created_at };
+    }));
+
     setLoading(false);
   };
 
@@ -257,6 +302,15 @@ export default function AdminPage() {
   const handleDeleteAnnouncement = async (id: string) => {
     await createClient().from("org_announcements").delete().eq("id", id);
     setAnnouncements(prev => prev.filter(a => a.id !== id));
+  };
+
+  const handleSendOrgMessage = async () => {
+    if (!orgMsgInput.trim() || !org) return;
+    setSendingOrgMsg(true);
+    const supabase = createClient();
+    await supabase.from("org_messages").insert({ org_id: org.id, sender_id: userId, content: orgMsgInput.trim() });
+    setOrgMsgInput("");
+    setSendingOrgMsg(false);
   };
 
   const handleCreate = async () => {
@@ -386,13 +440,13 @@ export default function AdminPage() {
   );
 
   const extraSeats = Math.max(members.length - FREE_SEATS, 0);
-  const adminTabs = ["oversigt", "opslagstavle", "historik", "medlemmer", "indstillinger"] as const;
-  const memberTabs = ["oversigt", "opslagstavle", "historik"] as const;
+  const adminTabs = ["oversigt", "opslagstavle", "historik", "beskeder", "medlemmer", "indstillinger"] as const;
+  const memberTabs = ["oversigt", "opslagstavle", "historik", "beskeder"] as const;
   const tabs = userRole === "admin" ? adminTabs : memberTabs;
 
   const tabLabels: Record<string, string> = {
     oversigt: "Oversigt", opslagstavle: "Opslagstavle", historik: "Historik",
-    medlemmer: "Medlemmer", indstillinger: "Indstillinger",
+    beskeder: "Beskeder", medlemmer: "Medlemmer", indstillinger: "Indstillinger",
   };
 
   return (
@@ -701,6 +755,89 @@ export default function AdminPage() {
               </div>
             </div>
           </>
+        )}
+
+        {/* BESKEDER — org group chat */}
+        {tab === "beskeder" && (
+          <div className="max-w-2xl flex flex-col" style={{ height: "calc(100vh - 13rem)" }}>
+            <div className="glass rounded-2xl overflow-hidden flex flex-col h-full">
+              <div className="flex items-center gap-3 px-6 py-4 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)" }}>
+                  <svg className="h-3.5 w-3.5" style={{ color: "#a78bfa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-white">Organisationschat</h2>
+                  <p className="text-xs" style={{ color: "#475569" }}>{members.length > 0 ? `${members.length} medlemmer` : "Alle org-medlemmer"}</p>
+                </div>
+              </div>
+
+              {/* Message list */}
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
+                {orgMessages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center space-y-2">
+                    <div className="h-12 w-12 rounded-2xl flex items-center justify-center" style={{ background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)" }}>
+                      <svg className="h-6 w-6" style={{ color: "#a78bfa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                    </div>
+                    <p className="text-sm font-semibold text-white">Ingen beskeder endnu</p>
+                    <p className="text-xs" style={{ color: "#334155" }}>Vær den første til at skrive noget til hele organisationen</p>
+                  </div>
+                ) : orgMessages.map((msg, i) => {
+                  const isMe = msg.sender_id === userId;
+                  const prevMsg = orgMessages[i - 1];
+                  const showHeader = !prevMsg || prevMsg.sender_id !== msg.sender_id;
+                  return (
+                    <div key={msg.id} className={`flex gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
+                      {showHeader && (
+                        <div className="h-8 w-8 shrink-0 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold text-white" style={{ background: "linear-gradient(135deg, #8b5cf6, #06b6d4)", marginTop: "0" }}>
+                          {msg.senderAvatar ? <img src={msg.senderAvatar} alt={msg.senderName} className="h-full w-full object-cover" /> : getInitials(msg.senderName)}
+                        </div>
+                      )}
+                      {!showHeader && <div className="w-8 shrink-0" />}
+                      <div className={`flex flex-col gap-0.5 max-w-[70%] ${isMe ? "items-end" : "items-start"}`}>
+                        {showHeader && (
+                          <div className={`flex items-baseline gap-2 ${isMe ? "flex-row-reverse" : ""}`}>
+                            <span className="text-xs font-semibold text-white">{isMe ? "Dig" : msg.senderName}</span>
+                            <span className="text-[10px]" style={{ color: "#334155" }}>{timeAgo(msg.created_at)}</span>
+                          </div>
+                        )}
+                        <div className="rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
+                          style={isMe
+                            ? { background: "rgba(139,92,246,0.25)", border: "1px solid rgba(139,92,246,0.35)", color: "#e2e8f0", borderBottomRightRadius: "6px" }
+                            : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#cbd5e1", borderBottomLeftRadius: "6px" }
+                          }>
+                          {msg.content}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={orgMsgBottomRef} />
+              </div>
+
+              {/* Input */}
+              <div className="shrink-0 px-4 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex gap-2 items-end">
+                  <textarea
+                    className="input-dark flex-1 resize-none"
+                    rows={1}
+                    placeholder="Skriv en besked til organisationen…"
+                    value={orgMsgInput}
+                    onChange={(e) => setOrgMsgInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendOrgMessage(); } }}
+                    style={{ maxHeight: "120px", overflowY: "auto" }}
+                  />
+                  <button
+                    onClick={handleSendOrgMessage}
+                    disabled={sendingOrgMsg || !orgMsgInput.trim()}
+                    className="shrink-0 rounded-xl p-2.5 transition-all"
+                    style={{ background: orgMsgInput.trim() ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.04)", border: `1px solid ${orgMsgInput.trim() ? "rgba(139,92,246,0.4)" : "rgba(255,255,255,0.08)"}`, color: orgMsgInput.trim() ? "#a78bfa" : "#334155" }}
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* INDSTILLINGER */}
