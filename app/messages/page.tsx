@@ -140,13 +140,6 @@ export default function MessagesPage() {
 
   const handleInviteResponse = async (msg: Message, accepted: boolean) => {
     const supabase = createClient();
-    if (accepted && msg.meeting_data) {
-      const md = msg.meeting_data as MeetingData;
-      const { error } = await supabase.from("meetings").insert({
-        title: md.title, date: md.date, time: md.time, user_id: userId,
-      });
-      if (error) return;
-    }
     await supabase.from("messages").update({ invite_status: accepted ? "accepted" : "declined" }).eq("id", msg.id);
     setMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, invite_status: accepted ? "accepted" : "declined" } : m));
   };
@@ -315,9 +308,14 @@ export default function MessagesPage() {
                               </div>
                             )}
                             {msg.invite_status === "accepted" && (
-                              <div className="mt-3 flex items-center gap-1.5 text-xs" style={{ color: "#4ade80" }}>
-                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                {isMine ? "Accepteret" : "Accepteret — tilføjet til kalender"}
+                              <div className="mt-3 flex flex-col gap-2">
+                                <div className="flex items-center gap-1.5 text-xs" style={{ color: "#4ade80" }}>
+                                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                  {isMine ? "Accepteret" : "Accepteret — tilføjet til kalender"}
+                                </div>
+                                <a href={`/room/${(msg.meeting_data as MeetingData).meeting_id}`} className="w-full rounded-xl py-2 text-xs font-bold text-white text-center block" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}>
+                                  Start møde
+                                </a>
                               </div>
                             )}
                             {msg.invite_status === "declined" && (

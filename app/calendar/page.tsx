@@ -29,9 +29,26 @@ export default function CalendarPage() {
     const supabase = createClient();
     const from = `${year}-${String(month + 1).padStart(2, "0")}-01`;
     const to   = `${year}-${String(month + 1).padStart(2, "0")}-${String(getDaysInMonth(year, month)).padStart(2, "0")}`;
-    supabase.from("meetings").select("id, title, date, time").gte("date", from).lte("date", to).then(({ data }) => {
+
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      const [{ data: own }, { data: inviteMsgs }] = await Promise.all([
+        supabase.from("meetings").select("id, title, date, time").gte("date", from).lte("date", to),
+        user
+          ? supabase.from("messages").select("meeting_data").eq("receiver_id", user.id).eq("type", "meeting_invite").eq("invite_status", "accepted")
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const ownIds = new Set((own ?? []).map((m: { id: string }) => m.id));
+      const invited = ((inviteMsgs ?? []) as { meeting_data: { meeting_id: string; title: string; date: string; time: string } | null }[])
+        .filter((msg) => {
+          const md = msg.meeting_data;
+          return md && md.date >= from && md.date <= to && !ownIds.has(md.meeting_id);
+        })
+        .map((msg) => ({ id: msg.meeting_data!.meeting_id, title: msg.meeting_data!.title, date: msg.meeting_data!.date, time: msg.meeting_data!.time }));
+
+      const all = [...(own ?? []), ...invited];
       const byDay: Record<number, { id: string; title: string; time: string; color: string; bg: string }[]> = {};
-      (data ?? []).forEach((m, i) => {
+      all.forEach((m, i) => {
         const day = parseInt(m.date.slice(8, 10));
         if (!byDay[day]) byDay[day] = [];
         byDay[day].push({ id: m.id, title: m.title, time: m.time ?? "", color: COLORS[i % COLORS.length], bg: BGGS[i % BGGS.length] });

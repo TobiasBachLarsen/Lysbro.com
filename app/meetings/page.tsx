@@ -14,8 +14,28 @@ export default function MeetingsPage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.from("meetings").select("*").order("date", { ascending: true }).then(({ data }) => {
-      setMeetings(data ?? []);
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) { setLoading(false); return; }
+
+      const [{ data: own }, { data: inviteMsgs }] = await Promise.all([
+        supabase.from("meetings").select("*").order("date", { ascending: true }),
+        supabase.from("messages").select("meeting_data").eq("receiver_id", user.id).eq("type", "meeting_invite").eq("invite_status", "accepted"),
+      ]);
+
+      const ownIds = new Set((own ?? []).map((m: Meeting) => m.id));
+      const invited: Meeting[] = (inviteMsgs ?? [])
+        .filter((msg: { meeting_data: MeetingData | null }) => msg.meeting_data && !ownIds.has((msg.meeting_data as MeetingData).meeting_id))
+        .map((msg: { meeting_data: MeetingData }) => ({
+          id: (msg.meeting_data as MeetingData).meeting_id,
+          title: (msg.meeting_data as MeetingData).title,
+          date: (msg.meeting_data as MeetingData).date,
+          time: (msg.meeting_data as MeetingData).time,
+          duration: "",
+          live: false,
+        }));
+
+      const all = [...(own ?? []), ...invited].sort((a, b) => a.date.localeCompare(b.date));
+      setMeetings(all);
       setLoading(false);
     });
   }, []);
