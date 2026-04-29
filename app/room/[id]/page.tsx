@@ -29,6 +29,7 @@ export default function RoomPage() {
   const [seconds, setSeconds] = useState(0);
   const [muted, setMuted] = useState(false);
   const [videoOff, setVideoOff] = useState(false);
+  const [jitsiToken, setJitsiToken] = useState<string | null>(null);
   const channelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
 
   // Check if current user is the host
@@ -48,6 +49,13 @@ export default function RoomPage() {
 
       if (meeting?.user_id === user.id) {
         setIsHost(true);
+        const res = await fetch("/api/jitsi-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ room: `agora-${id}-room`, name: name }),
+        });
+        const { token } = await res.json();
+        setJitsiToken(token);
         setPhase("meeting");
       } else {
         setPhase("prejoin");
@@ -117,12 +125,21 @@ export default function RoomPage() {
     return () => { supabase.removeChannel(ch); };
   }, [phase, lobbyId]);
 
-  // Admitted → enter meeting after short delay
+  // Admitted → fetch token and enter meeting
   useEffect(() => {
     if (phase !== "admitted") return;
-    const t = setTimeout(() => setPhase("meeting"), 1500);
+    const t = setTimeout(async () => {
+      const res = await fetch("/api/jitsi-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room: `agora-${id}-room`, name: guestName }),
+      });
+      const { token } = await res.json();
+      setJitsiToken(token);
+      setPhase("meeting");
+    }, 1500);
     return () => clearTimeout(t);
-  }, [phase]);
+  }, [phase, id, guestName]);
 
   const handleKnock = async () => {
     if (!guestName.trim()) return;
@@ -341,12 +358,14 @@ export default function RoomPage() {
       </div>
 
       {/* Jitsi iframe */}
-      <iframe
-        src={`https://meet.lysbro.com/${roomName}`}
-        allow="camera; microphone; fullscreen; display-capture; autoplay"
-        className="w-full flex-1"
-        style={{ border: "none" }}
-      />
+      {jitsiToken && (
+        <iframe
+          src={`https://meet.lysbro.com/${roomName}?jwt=${jitsiToken}`}
+          allow="camera; microphone; fullscreen; display-capture; autoplay"
+          className="w-full flex-1"
+          style={{ border: "none" }}
+        />
+      )}
 
       {/* Bottom controls */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3">
