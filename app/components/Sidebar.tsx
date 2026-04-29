@@ -89,9 +89,18 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         .eq("type", "meeting_invite")
         .eq("invite_status", "pending");
 
-      const inviteSenderIds = (inviteMsgs ?? []).map((m: any) => m.sender_id);
-      const { data: inviteSenders } = inviteSenderIds.length
-        ? await supabase.from("profiles").select("id, full_name").in("id", inviteSenderIds)
+      const { data: orgInviteMsgs } = await supabase.from("messages")
+        .select("id, sender_id, meeting_data")
+        .eq("receiver_id", user.id)
+        .eq("type", "org_invite")
+        .eq("invite_status", "pending");
+
+      const allSenderIds = [...new Set([
+        ...(inviteMsgs ?? []).map((m: any) => m.sender_id),
+        ...(orgInviteMsgs ?? []).map((m: any) => m.sender_id),
+      ])];
+      const { data: inviteSenders } = allSenderIds.length
+        ? await supabase.from("profiles").select("id, full_name").in("id", allSenderIds)
         : { data: [] };
 
       const notifs: Notif[] = [
@@ -102,6 +111,10 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         ...(inviteMsgs ?? []).map((m: any) => {
           const p = (inviteSenders ?? []).find((p: any) => p.id === m.sender_id);
           return { id: m.id, text: `Mødeindvitation: ${m.meeting_data?.title ?? "Møde"}`, sub: `Fra ${p?.full_name ?? "Ukendt"}`, color: "#a78bfa", read: false };
+        }),
+        ...(orgInviteMsgs ?? []).map((m: any) => {
+          const p = (inviteSenders ?? []).find((p: any) => p.id === m.sender_id);
+          return { id: m.id, text: `Org-invitation: ${m.meeting_data?.org_name ?? "Organisation"}`, sub: `Fra ${p?.full_name ?? "Ukendt"}`, color: "#22d3ee", read: false };
         }),
       ];
       setNotifications(notifs);

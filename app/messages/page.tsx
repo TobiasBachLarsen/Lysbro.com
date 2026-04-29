@@ -7,7 +7,8 @@ import { AVATAR_COLORS, getInitials, formatTime } from "@/app/lib/utils";
 
 type Contact = { id: string; name: string; initials: string; color: string; avatar_url: string | null };
 type MeetingData = { title: string; date: string; time: string; meeting_id: string };
-type Message = { id: string; sender_id: string; receiver_id: string; content: string; read: boolean; created_at: string; type?: string; meeting_data?: MeetingData; invite_status?: string };
+type OrgData = { org_id: string; org_name: string };
+type Message = { id: string; sender_id: string; receiver_id: string; content: string; read: boolean; created_at: string; type?: string; meeting_data?: MeetingData | OrgData; invite_status?: string };
 
 function Avatar({ contact, size = 10 }: { contact: Pick<Contact, "initials" | "color" | "avatar_url" | "name">; size?: number }) {
   const cls = `h-${size} w-${size} shrink-0 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-white`;
@@ -117,13 +118,22 @@ export default function MessagesPage() {
   const handleInviteResponse = async (msg: Message, accepted: boolean) => {
     const supabase = createClient();
     if (accepted && msg.meeting_data) {
+      const md = msg.meeting_data as MeetingData;
       const { error } = await supabase.from("meetings").insert({
-        title: msg.meeting_data.title,
-        date: msg.meeting_data.date,
-        time: msg.meeting_data.time,
-        user_id: userId,
+        title: md.title, date: md.date, time: md.time, user_id: userId,
       });
       if (error) return;
+    }
+    await supabase.from("messages").update({ invite_status: accepted ? "accepted" : "declined" }).eq("id", msg.id);
+    setMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, invite_status: accepted ? "accepted" : "declined" } : m));
+  };
+
+  const handleOrgInviteResponse = async (msg: Message, accepted: boolean) => {
+    const supabase = createClient();
+    if (accepted && msg.meeting_data) {
+      const od = msg.meeting_data as OrgData;
+      await supabase.from("organization_members").insert({ org_id: od.org_id, user_id: userId, role: "member" });
+      await supabase.from("profiles").update({ org_id: od.org_id }).eq("id", userId);
     }
     await supabase.from("messages").update({ invite_status: accepted ? "accepted" : "declined" }).eq("id", msg.id);
     setMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, invite_status: accepted ? "accepted" : "declined" } : m));
@@ -216,9 +226,37 @@ export default function MessagesPage() {
                 {messages.map((msg) => {
                   const isMine = msg.sender_id === userId;
                   const isInvite = msg.type === "meeting_invite" && msg.meeting_data;
+                  const isOrgInvite = msg.type === "org_invite" && msg.meeting_data;
                   return (
                     <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                      {isInvite ? (
+                      {isOrgInvite ? (
+                        <div className="max-w-xs w-full rounded-2xl overflow-hidden" style={{ background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.25)", ...(isMine ? { borderBottomRightRadius: 4 } : { borderBottomLeftRadius: 4 }) }}>
+                          <div className="px-4 pt-4 pb-3">
+                            <div className="flex items-center gap-2 mb-3">
+                              <svg className="h-4 w-4 shrink-0" style={{ color: "#22d3ee" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+                              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#22d3ee" }}>Organisationsinvitation</span>
+                            </div>
+                            <p className="text-sm font-bold text-white mb-1">{(msg.meeting_data as OrgData).org_name}</p>
+                            <p className="text-xs" style={{ color: "#64748b" }}>Du er inviteret til at joine denne organisation</p>
+                            {!isMine && msg.invite_status === "pending" && (
+                              <div className="flex gap-2 mt-3">
+                                <button onClick={() => handleOrgInviteResponse(msg, true)} className="flex-1 rounded-xl py-2 text-xs font-bold text-white" style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>Accepter</button>
+                                <button onClick={() => handleOrgInviteResponse(msg, false)} className="flex-1 rounded-xl py-2 text-xs font-medium" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", color: "#64748b" }}>Afvis</button>
+                              </div>
+                            )}
+                            {msg.invite_status === "accepted" && (
+                              <div className="mt-3 flex items-center gap-1.5 text-xs" style={{ color: "#4ade80" }}>
+                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                {isMine ? "Invitation sendt" : "Accepteret — du er nu medlem"}
+                              </div>
+                            )}
+                            {msg.invite_status === "declined" && (
+                              <p className="mt-3 text-xs" style={{ color: "#f87171" }}>Afvist</p>
+                            )}
+                          </div>
+                          <p className={`text-[10px] px-4 pb-3 ${isMine ? "text-right" : ""}`} style={{ color: "#334155" }}>{formatTime(msg.created_at)}</p>
+                        </div>
+                      ) : isInvite ? (
                         <div className="max-w-xs w-full rounded-2xl overflow-hidden" style={{
                           background: "rgba(59,130,246,0.08)",
                           border: "1px solid rgba(59,130,246,0.25)",

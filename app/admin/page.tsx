@@ -276,14 +276,19 @@ export default function AdminPage() {
     if (!org) return;
     setInviting(true);
     const supabase = createClient();
-    await supabase.from("organization_members").insert({ org_id: org.id, user_id: invitee.id, role: "member" });
-    await supabase.from("profiles").update({ org_id: org.id }).eq("id", invitee.id);
+    await supabase.from("messages").insert({
+      sender_id: userId,
+      receiver_id: invitee.id,
+      content: `Du er inviteret til at joine organisationen "${org.name}"`,
+      type: "org_invite",
+      meeting_data: { org_id: org.id, org_name: org.name },
+      invite_status: "pending",
+    });
     setInviteEmail("");
     setInviteSearch([]);
     setInviteDone(invitee.full_name || invitee.email);
     setTimeout(() => setInviteDone(""), 3000);
     setInviting(false);
-    loadData();
   };
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
