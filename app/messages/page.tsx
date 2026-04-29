@@ -38,40 +38,56 @@ export default function MessagesPage() {
       if (!user) return;
       setUserId(user.id);
 
-      const { data: rows } = await supabase
-        .from("contacts")
-        .select("id, name, email")
-        .eq("user_id", user.id);
-
+      // Kontakter fra contacts-tabellen
+      const { data: rows } = await supabase.from("contacts").select("id, name, email").eq("user_id", user.id);
       const emails = (rows ?? []).map((r: any) => r.email).filter(Boolean);
-      const { data: profiles } = emails.length
-        ? await supabase.from("profiles").select("id, email, avatar_url").in("email", emails)
+      const { data: contactProfiles } = emails.length
+        ? await supabase.from("profiles").select("id, full_name, email, avatar_url").in("email", emails)
+        : { data: [] };
+      const contactIdSet = new Set((contactProfiles ?? []).map((p: any) => p.id));
+
+      // Folk der har sendt dig beskeder men ikke er kontakter (f.eks. invite-afsendere)
+      const { data: receivedMsgs } = await supabase.from("messages")
+        .select("sender_id").eq("receiver_id", user.id);
+      const extraIds = [...new Set((receivedMsgs ?? [])
+        .map((m: any) => m.sender_id)
+        .filter((id: string) => id !== user.id && !contactIdSet.has(id)))];
+      const { data: extraProfiles } = extraIds.length
+        ? await supabase.from("profiles").select("id, full_name, email, avatar_url").in("id", extraIds)
         : { data: [] };
 
-      const list: Contact[] = (rows ?? [])
-        .map((r: any, i: number) => {
-          const profile = (profiles ?? []).find((p: any) => p.email === r.email);
-          if (!profile) return null;
-          return {
-            id: profile.id,
-            name: r.name ?? r.email,
-            initials: getInitials(r.name ?? "?"),
-            color: AVATAR_COLORS[i % AVATAR_COLORS.length],
-            avatar_url: profile.avatar_url ?? null,
-          };
-        })
-        .filter(Boolean) as Contact[];
-      setContacts(list);
+      // Samlet liste af alle profiler
+      const allProfiles = [
+        ...(contactProfiles ?? []).map((p: any) => {
+          const row = (rows ?? []).find((r: any) => r.email === p.email);
+          return { id: p.id, name: row?.name ?? p.full_name ?? p.email, avatar_url: p.avatar_url ?? null };
+        }),
+        ...(extraProfiles ?? []).map((p: any) => ({ id: p.id, name: p.full_name ?? p.email, avatar_url: p.avatar_url ?? null })),
+      ];
 
-      for (const c of list) {
-        const { data: msgs } = await supabase
-          .from("messages")
-          .select("*")
-          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${c.id}),and(sender_id.eq.${c.id},receiver_id.eq.${user.id})`)
-          .order("created_at", { ascending: false })
-          .limit(1);
-        if (msgs?.[0]) setLastMessages((prev) => ({ ...prev, [c.id]: msgs[0] }));
-      }
+      // Hent seneste besked for alle og sorter
+      const lastMsgsMap: Record<string, Message> = {};
+      await Promise.all(allProfiles.map(async (p) => {
+        const { data: msgs } = await supabase.from("messages").select("*")
+          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${p.id}),and(sender_id.eq.${p.id},receiver_id.eq.${user.id})`)
+          .order("created_at", { ascending: false }).limit(1);
+        if (msgs?.[0]) lastMsgsMap[p.id] = msgs[0];
+      }));
+      setLastMessages(lastMsgsMap);
+
+      const sorted = allProfiles.sort((a, b) => {
+        const ta = lastMsgsMap[a.id]?.created_at ?? "";
+        const tb = lastMsgsMap[b.id]?.created_at ?? "";
+        return tb.localeCompare(ta);
+      });
+
+      setContacts(sorted.map((p, i) => ({
+        id: p.id,
+        name: p.name,
+        initials: getInitials(p.name),
+        color: AVATAR_COLORS[i % AVATAR_COLORS.length],
+        avatar_url: p.avatar_url,
+      })));
     });
   }, []);
 
@@ -102,6 +118,13 @@ export default function MessagesPage() {
         if (!relevant) return;
         setMessages((prev) => [...prev, msg]);
         setLastMessages((prev) => ({ ...prev, [selected.id]: msg }));
+        setContacts((prev) => {
+          const idx = prev.findIndex((c) => c.id === selected.id);
+          if (idx <= 0) return prev;
+          const updated = [...prev];
+          const [moved] = updated.splice(idx, 1);
+          return [moved, ...updated];
+        });
         if (msg.receiver_id === userId)
           supabase.from("messages").update({ read: true }).eq("id", msg.id).then(() => {});
       })

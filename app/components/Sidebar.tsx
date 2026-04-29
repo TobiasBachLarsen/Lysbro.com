@@ -164,17 +164,17 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
     if (orgChannelRef.current) supabase.removeChannel(orgChannelRef.current);
     const ch = supabase
       .channel(`sidebar-org-${orgId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_announcements", filter: `org_id=eq.${orgId}` }, (payload) => {
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_announcements" }, (payload) => {
+        if ((payload.new as any).org_id !== orgId) return;
         const seenAt = typeof window !== "undefined" ? localStorage.getItem("announcements_seen_at") : null;
         const isNew = !seenAt || new Date((payload.new as any).created_at) > new Date(seenAt);
-        if (isNew) {
-          setOrgNewCount((n) => n + 1);
-          setNotifications((prev) => {
-            const filtered = prev.filter((n) => !n.id.startsWith("ann-"));
-            const content = (payload.new as any).content ?? "";
-            return [...filtered, { id: `ann-${(payload.new as any).id}`, text: "Nyt opslag i organisationen", sub: content.slice(0, 50), color: "#f59e0b", read: false }];
-          });
-        }
+        if (!isNew) return;
+        const content = (payload.new as any).content ?? "";
+        setOrgNewCount((n) => n + 1);
+        setNotifications((prev) => {
+          const filtered = prev.filter((n) => !n.id.startsWith("ann-"));
+          return [...filtered, { id: `ann-${(payload.new as any).id}`, text: "Nyt opslag i organisationen", sub: content.slice(0, 50), color: "#f59e0b", read: false }];
+        });
       })
       .subscribe();
     orgChannelRef.current = ch;
