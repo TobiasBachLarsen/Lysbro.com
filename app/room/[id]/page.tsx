@@ -358,6 +358,20 @@ export default function RoomPage() {
       {/* Jitsi iframe */}
       {jitsiToken && (
         <iframe
+          ref={(el) => {
+            if (!el) return;
+            const handler = (e: MessageEvent) => {
+              if (e.origin !== "https://meet.lysbro.com") return;
+              try {
+                const msg = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+                if (msg?.action === "video-conference-left" || msg?.action === "readyToClose") {
+                  window.removeEventListener("message", handler);
+                  window.location.href = "/meetings";
+                }
+              } catch {}
+            };
+            window.addEventListener("message", handler);
+          }}
           src={`https://meet.lysbro.com/${roomName}?jwt=${jitsiToken}#config.prejoinPageEnabled=false&config.disableDeepLinking=true&config.filmstrip.disabled=true`}
           allow="camera; microphone; fullscreen; display-capture; autoplay"
           className="w-full flex-1"
