@@ -127,8 +127,27 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
       if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
 
       const { data: membership } = await supabase.from("organization_members")
-        .select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
-      setIsAdmin(!!membership);
+        .select("role, org_id").eq("user_id", user.id).maybeSingle();
+      setIsAdmin(membership?.role === "admin");
+
+      if (membership?.org_id) {
+        const { data: latestAnn } = await supabase.from("org_announcements")
+          .select("id, content, created_at")
+          .eq("org_id", membership.org_id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (latestAnn) {
+          const seenAt = typeof window !== "undefined" ? localStorage.getItem("announcements_seen_at") : null;
+          const isNew = !seenAt || new Date(latestAnn.created_at) > new Date(seenAt);
+          if (isNew) {
+            setNotifications((prev) => [
+              ...prev,
+              { id: `ann-${latestAnn.id}`, text: "Nyt opslag i organisationen", sub: latestAnn.content.slice(0, 50), color: "#f59e0b", read: false },
+            ]);
+          }
+        }
+      }
     });
 
     return () => { cancelled = true; };
@@ -346,7 +365,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
                 </div>
               )}
               {notifications.map((n) => {
-                const href = n.color === "#3b82f6" ? "/contacts" : "/messages";
+                const href = n.color === "#3b82f6" ? "/contacts" : n.color === "#f59e0b" ? "/admin" : "/messages";
                 return (
                   <Link key={n.id} href={href} onClick={() => { onMobileClose?.(); setNotifOpen(false); }}
                     className="flex items-start gap-3 px-4 py-3 transition-all"

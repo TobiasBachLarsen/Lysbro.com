@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import AppLayout from "@/app/components/AppLayout";
 import { createClient } from "@/app/lib/supabase";
@@ -103,7 +103,26 @@ export default function AdminPage() {
   const [renameLoading, setRenameLoading] = useState(false);
   const [tab, setTab] = useState<"oversigt" | "opslagstavle" | "historik" | "medlemmer" | "indstillinger">("oversigt");
 
+  const annChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
+
   useEffect(() => { loadData(); }, []);
+
+  useEffect(() => {
+    if (!org) return;
+    const supabase = createClient();
+    if (annChannelRef.current) supabase.removeChannel(annChannelRef.current);
+    const ch = supabase
+      .channel(`org-announcements-${org.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_announcements", filter: `org_id=eq.${org.id}` }, async (payload) => {
+        const a = payload.new as any;
+        const { data: p } = await supabase.from("profiles").select("full_name, email").eq("id", a.author_id).single();
+        const newAnn: Announcement = { id: a.id, content: a.content, authorName: p?.full_name ?? p?.email ?? "Ukendt", created_at: a.created_at };
+        setAnnouncements((prev) => [newAnn, ...prev]);
+      })
+      .subscribe();
+    annChannelRef.current = ch;
+    return () => { supabase.removeChannel(ch); };
+  }, [org?.id]);
 
   const loadData = async () => {
     const supabase = createClient();
@@ -475,6 +494,11 @@ export default function AdminPage() {
         )}
 
         {/* OPSLAGSTAVLE */}
+        {tab === "opslagstavle" && (() => {
+          if (typeof window !== "undefined") localStorage.setItem("announcements_seen_at", new Date().toISOString());
+          return null;
+        })()}
+
         {tab === "opslagstavle" && (
           <div className="max-w-2xl space-y-5">
             {userRole === "admin" && (
