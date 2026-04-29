@@ -6,6 +6,7 @@ import AppLayout from "@/app/components/AppLayout";
 import { createClient } from "@/app/lib/supabase";
 
 type Meeting = { id: string; title: string; date: string; time: string; duration: string; live: boolean };
+type MeetingData = { meeting_id: string; title: string; date: string; time: string };
 
 export default function MeetingsPage() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
