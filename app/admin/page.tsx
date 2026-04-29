@@ -303,7 +303,7 @@ export default function AdminPage() {
     setMembers(prev => prev.filter(m => m.id !== memberId));
   };
 
-  if (!loading && plan !== "erhverv") return (
+  if (!loading && plan !== "erhverv" && !userRole) return (
     <AppLayout activeHref="/admin">
       <header className="sticky top-0 z-30 flex h-16 items-center px-8" style={{ background: "rgba(5,7,15,0.85)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div>
