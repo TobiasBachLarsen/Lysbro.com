@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppLayout from "@/app/components/AppLayout";
@@ -13,6 +13,22 @@ export default function NewMeetingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null);
+  const [userOrgId, setUserOrgId] = useState<string | null>(null);
+  const [userOrgName, setUserOrgName] = useState<string>("");
+  const [isOrgMeeting, setIsOrgMeeting] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("org_id").eq("id", user.id).single();
+      if (data?.org_id) {
+        setUserOrgId(data.org_id);
+        const { data: orgData } = await supabase.from("organizations").select("name").eq("id", data.org_id).single();
+        setUserOrgName(orgData?.name ?? "");
+      }
+    });
+  }, []);
 
   const set = (field: string) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -37,9 +53,10 @@ export default function NewMeetingPage() {
       time: form.time,
       duration: form.duration ? `${form.duration} min` : null,
       description: form.description || null,
+      org_id: isOrgMeeting && userOrgId ? userOrgId : null,
     }).select("id").single();
 
-    if (error) { setIsLoading(false); alert("Fejl: " + error.message); return; }
+    if (error) { setIsLoading(false); return; }
 
     // Send mødeinvitation via beskeder til alle inviterede e-mails
     const emails = form.invites.split("\n").map((e) => e.trim()).filter((e) => e.includes("@"));
@@ -227,6 +244,37 @@ export default function NewMeetingPage() {
                   </p>
                 </div>
               </div>
+
+              {/* Org meeting toggle */}
+              {userOrgId && (
+                <button
+                  type="button"
+                  onClick={() => setIsOrgMeeting((v) => !v)}
+                  className="flex items-center gap-4 w-full rounded-2xl p-5 text-left transition-all"
+                  style={isOrgMeeting ? {
+                    background: "rgba(139,92,246,0.12)",
+                    border: "1px solid rgba(139,92,246,0.35)",
+                  } : {
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <div className="h-10 w-10 shrink-0 rounded-xl flex items-center justify-center" style={{ background: isOrgMeeting ? "rgba(139,92,246,0.2)" : "rgba(255,255,255,0.05)" }}>
+                    <svg className="h-5 w-5" style={{ color: isOrgMeeting ? "#a78bfa" : "#475569" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold" style={{ color: isOrgMeeting ? "#c4b5fd" : "#94a3b8" }}>
+                      Organisationsmøde
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: isOrgMeeting ? "#7c3aed" : "#334155" }}>
+                      {isOrgMeeting ? `Vises i ${userOrgName}-dashboardet` : `Klik for at tilknytte til ${userOrgName}`}
+                    </p>
+                  </div>
+                  <div className="shrink-0 h-5 w-9 rounded-full transition-all relative" style={{ background: isOrgMeeting ? "#7c3aed" : "rgba(255,255,255,0.1)" }}>
+                    <div className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all" style={{ left: isOrgMeeting ? "calc(100% - 18px)" : "2px", boxShadow: "0 1px 3px rgba(0,0,0,0.4)" }} />
+                  </div>
+                </button>
+              )}
 
               {/* Actions */}
               <div className="flex gap-3">

@@ -123,7 +123,7 @@ export default function MessagesPage() {
         time: msg.meeting_data.time,
         user_id: userId,
       });
-      if (error) { console.error("Meeting accept error:", error); return; }
+      if (error) return;
     }
     await supabase.from("messages").update({ invite_status: accepted ? "accepted" : "declined" }).eq("id", msg.id);
     setMessages((prev) => prev.map((m) => m.id === msg.id ? { ...m, invite_status: accepted ? "accepted" : "declined" } : m));

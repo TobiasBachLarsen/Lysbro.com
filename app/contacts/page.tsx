@@ -156,7 +156,6 @@ export default function ContactsPage() {
       .select("id")
       .single();
 
-    if (meetingErr) console.error("Meeting insert error:", meetingErr);
 
     const { error: msgErr } = await supabase.from("messages").insert({
       sender_id: user.id,
@@ -170,7 +169,6 @@ export default function ContactsPage() {
     setInviteLoading(false);
 
     if (msgErr) {
-      console.error("Message insert error:", msgErr);
       setInviteError(`Fejl: ${msgErr.message}`);
       return;
     }

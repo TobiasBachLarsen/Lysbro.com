@@ -30,9 +30,9 @@ const plans = [
   {
     name: "Erhverv",
     price: "1.499",
-    priceLabel: "kr./md.",
+    priceLabel: "kr./md. inkl. 5 brugere",
     description: "Til organisationer med høje krav",
-    features: ["Ubegrænsede møder", "100+ deltagere", "Ingen reklamer", "GDPR-databehandleraftale", "SSO / SAML-login", "Admin-dashboard & SLA"],
+    features: ["Ubegrænsede møder", "100+ deltagere", "Ingen reklamer", "GDPR-databehandleraftale", "SSO / SAML-login", "Admin-dashboard & SLA", "5 org-brugere inkl. · +99 kr/md per ekstra"],
     note: null,
     cta: "Kontakt os",
     href: "#contact",

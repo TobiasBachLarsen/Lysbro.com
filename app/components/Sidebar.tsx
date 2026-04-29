@@ -49,6 +49,7 @@ interface SidebarProps {
 export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen = false, onMobileClose }: SidebarProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [sidebarAdIdx, setSidebarAdIdx] = useState(1);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [userInitials, setUserInitials] = useState("?");
   const [plan, setPlan] = useState<PlanMeta>(planProp ?? PLANS.gratis);
@@ -109,11 +110,12 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         .select("id", { count: "exact" }).eq("receiver_id", user.id).eq("read", false);
       setUnreadMessages(msgCount ?? 0);
 
-      const { data: files } = await supabase.storage.from("avatars").list(user.id);
-      if (files && files.length > 0) {
-        const { data: signed } = await supabase.storage.from("avatars").createSignedUrl(`${user.id}/${files[0].name}`, 604800);
-        if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
-      }
+      const { data: profile } = await supabase.from("profiles").select("avatar_url").eq("id", user.id).single();
+      if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
+
+      const { data: membership } = await supabase.from("organization_members")
+        .select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+      setIsAdmin(!!membership);
     });
 
     return () => { cancelled = true; };
@@ -207,6 +209,26 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
             </Link>
           );
         })}
+
+        {/* Organisation-link — synlig for alle */}
+        {(() => {
+          const active = activeHref === "/admin";
+          return (
+            <Link href="/admin" onClick={onMobileClose}
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all mx-0"
+              style={active
+                ? { background: "linear-gradient(135deg, rgba(139,92,246,0.2), rgba(236,72,153,0.12))", border: "1px solid rgba(139,92,246,0.3)", color: "#ffffff" }
+                : { color: "#64748b", border: "1px solid transparent" }}
+              onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLAnchorElement).style.color = "#94a3b8"; } }}
+              onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "#64748b"; } }}
+            >
+              <span style={{ color: active ? "#a78bfa" : "inherit" }}>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/></svg>
+              </span>
+              Organisation
+            </Link>
+          );
+        })()}
       </nav>
 
       {/* Sidebar-reklame */}

@@ -37,19 +37,24 @@ export default function ProfilePage() {
       if (user) {
         setEmail(user.email ?? "");
         setName(user.user_metadata?.full_name ?? user.email ?? "");
-        // Load avatar directly from storage using signed URL (works for both public and private buckets)
-        const { data: files } = await supabase.storage.from("avatars").list(user.id);
-        if (files && files.length > 0) {
-          const { data: signed } = await supabase.storage.from("avatars").createSignedUrl(`${user.id}/${files[0].name}`, 604800);
-          if (signed?.signedUrl) setAvatarUrl(signed.signedUrl);
-        }
+        const { data: profile } = await supabase.from("profiles").select("avatar_url").eq("id", user.id).single();
+        if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
       }
     });
   }, []);
 
+  const [avatarError, setAvatarError] = useState("");
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const ext = file.name.toLowerCase();
+    if (ext.endsWith(".heic") || ext.endsWith(".heif") || file.type === "image/heic" || file.type === "image/heif") {
+      setAvatarError("HEIC understøttes ikke — brug JPG eller PNG.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    setAvatarError("");
     setAvatarFile(file);
     setAvatarUrl(URL.createObjectURL(file));
   };
@@ -71,15 +76,18 @@ export default function ProfilePage() {
     let finalAvatarUrl = avatarUrl;
 
     if (avatarFile) {
-      const ext = avatarFile.name.split(".").pop();
-      const path = `${user.id}/avatar.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, avatarFile, { upsert: true });
-      if (!uploadError) {
-        const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-        finalAvatarUrl = publicUrl;
-        setAvatarUrl(publicUrl);
-        setAvatarFile(null);
+      const ext = avatarFile.name.split(".").pop() ?? "jpg";
+      const path = `${user.id}/avatar_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, avatarFile, { contentType: avatarFile.type });
+      if (uploadError) {
+        setAvatarError("Upload fejlede: " + uploadError.message);
+        setSavingProfile(false);
+        return;
       }
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      finalAvatarUrl = publicUrl;
+      setAvatarUrl(publicUrl);
+      setAvatarFile(null);
     }
 
     await supabase.from("profiles").upsert({ id: user.id, full_name: name, avatar_url: finalAvatarUrl });
@@ -147,7 +155,7 @@ export default function ProfilePage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               className="hidden"
               onChange={handleAvatarChange}
             />
@@ -181,6 +189,7 @@ export default function ProfilePage() {
                   </button>
                 )}
               </div>
+              {avatarError && <p className="text-xs" style={{ color: "#f87171" }}>{avatarError}</p>}
               {!avatarUrl && (
                 <div>
                   <p className="text-xs font-semibold mb-2" style={{ color: "#64748b" }}>Eller vælg farve</p>

@@ -32,7 +32,7 @@ const plans = [
     name: "Erhverv",
     price: "1.499",
     description: "Til større organisationer",
-    features: ["Ubegrænsede møder", "Op til 100+ deltagere", "Ingen reklamer", "GDPR-databehandleraftale", "SSO / SAML-login", "Admin-dashboard", "Prioriteret support & SLA"],
+    features: ["Ubegrænsede møder", "Op til 100+ deltagere", "Ingen reklamer", "GDPR-databehandleraftale", "SSO / SAML-login", "Admin-dashboard", "5 org-brugere inkluderet", "+ 99 kr/md per ekstra bruger"],
     badge: null,
     color: "#22d3ee",
     bg: "rgba(6,182,212,0.08)",
