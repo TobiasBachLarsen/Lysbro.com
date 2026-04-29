@@ -107,9 +107,12 @@ export default function AdminPage() {
   const [orgMessages, setOrgMessages] = useState<OrgMessage[]>([]);
   const [orgMsgInput, setOrgMsgInput] = useState("");
   const [sendingOrgMsg, setSendingOrgMsg] = useState(false);
+  const [newAnn, setNewAnn] = useState(false);
+  const [newMsg, setNewMsg] = useState(false);
   const orgMsgBottomRef = useRef<HTMLDivElement>(null);
   const annChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
   const orgMsgChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
+  const currentUserIdRef = useRef<string>("");
 
   useEffect(() => { loadData(); }, []);
 
@@ -125,6 +128,7 @@ export default function AdminPage() {
         const { data: p } = await supabase.from("profiles").select("full_name, email, avatar_url").eq("id", m.sender_id).single();
         const newMsg: OrgMessage = { id: m.id, sender_id: m.sender_id, senderName: p?.full_name ?? p?.email ?? "Ukendt", senderAvatar: p?.avatar_url ?? null, content: m.content, created_at: m.created_at };
         setOrgMessages((prev) => [...prev, newMsg]);
+        if (m.sender_id !== currentUserIdRef.current) setNewMsg(true);
       })
       .subscribe();
     orgMsgChannelRef.current = ch;
@@ -144,8 +148,9 @@ export default function AdminPage() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_announcements", filter: `org_id=eq.${org.id}` }, async (payload) => {
         const a = payload.new as any;
         const { data: p } = await supabase.from("profiles").select("full_name, email, avatar_url").eq("id", a.author_id).single();
-        const newAnn: Announcement = { id: a.id, content: a.content, authorName: p?.full_name ?? p?.email ?? "Ukendt", authorAvatar: p?.avatar_url ?? null, created_at: a.created_at };
-        setAnnouncements((prev) => [newAnn, ...prev]);
+        const ann: Announcement = { id: a.id, content: a.content, authorName: p?.full_name ?? p?.email ?? "Ukendt", authorAvatar: p?.avatar_url ?? null, created_at: a.created_at };
+        setAnnouncements((prev) => [ann, ...prev]);
+        if (a.author_id !== currentUserIdRef.current) setNewAnn(true);
       })
       .subscribe();
     annChannelRef.current = ch;
@@ -157,6 +162,7 @@ export default function AdminPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setUserId(user.id);
+    currentUserIdRef.current = user.id;
 
     const { data: profile } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
     setPlan(profile?.plan ?? "");
@@ -241,6 +247,7 @@ export default function AdminPage() {
     const bars: MonthBar[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
+      d.setDate(1);
       d.setMonth(d.getMonth() - i);
       const y = d.getFullYear();
       const mo = d.getMonth();
@@ -269,6 +276,13 @@ export default function AdminPage() {
       return { id: a.id, content: a.content, authorName: ap?.full_name ?? ap?.email ?? "Ukendt", authorAvatar: ap?.avatar_url ?? null, created_at: a.created_at };
     }));
 
+    // Tjek om der er usete opslag
+    const annSeenAt = typeof window !== "undefined" ? localStorage.getItem("announcements_seen_at") : null;
+    const hasUnseenAnns = annSeenAt
+      ? (annRows ?? []).some((a: any) => new Date(a.created_at) > new Date(annSeenAt))
+      : (annRows ?? []).length > 0;
+    if (hasUnseenAnns) setNewAnn(true);
+
     // Org-gruppechat beskeder
     const { data: orgMsgRows } = await supabase.from("org_messages")
       .select("id, sender_id, content, created_at")
@@ -285,6 +299,13 @@ export default function AdminPage() {
       const p = (msgSenderProfiles ?? []).find((p: any) => p.id === m.sender_id);
       return { id: m.id, sender_id: m.sender_id, senderName: p?.full_name ?? p?.email ?? "Ukendt", senderAvatar: p?.avatar_url ?? null, content: m.content, created_at: m.created_at };
     }));
+
+    // Tjek om der er usete org-beskeder
+    const msgSeenAt = typeof window !== "undefined" ? localStorage.getItem("org_messages_seen_at") : null;
+    const hasUnseenMsgs = msgSeenAt
+      ? (orgMsgRows ?? []).some((m: any) => m.sender_id !== user.id && new Date(m.created_at) > new Date(msgSeenAt))
+      : (orgMsgRows ?? []).some((m: any) => m.sender_id !== user.id);
+    if (hasUnseenMsgs) setNewMsg(true);
 
     setLoading(false);
   };
@@ -457,14 +478,33 @@ export default function AdminPage() {
           <p className="text-xs" style={{ color: "#475569" }}>Organisationsdashboard</p>
         </div>
         <div className="flex gap-1 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-          {tabs.map((t) => (
-            <button key={t} onClick={() => setTab(t as any)}
-              className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
-              style={tab === t ? { background: "rgba(139,92,246,0.2)", color: "#c4b5fd" } : { color: "#475569" }}
-            >
-              {tabLabels[t]}
-            </button>
-          ))}
+          {tabs.map((t) => {
+            const hasAlert = (t === "opslagstavle" && newAnn) || (t === "beskeder" && newMsg);
+            const alertColor = t === "opslagstavle" ? "#f59e0b" : "#8b5cf6";
+            return (
+              <button key={t} onClick={() => {
+                setTab(t as any);
+                if (t === "opslagstavle") {
+                  setNewAnn(false);
+                  if (typeof window !== "undefined") localStorage.setItem("announcements_seen_at", new Date().toISOString());
+                }
+                if (t === "beskeder") {
+                  setNewMsg(false);
+                  if (typeof window !== "undefined") localStorage.setItem("org_messages_seen_at", new Date().toISOString());
+                }
+              }}
+                className="relative rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
+                style={tab === t
+                  ? { background: hasAlert ? `rgba(${t === "opslagstavle" ? "245,158,11" : "139,92,246"},0.2)` : "rgba(139,92,246,0.2)", color: hasAlert ? alertColor : "#c4b5fd", boxShadow: hasAlert ? `0 0 10px ${alertColor}55` : "none" }
+                  : { color: hasAlert ? alertColor : "#475569" }}
+              >
+                {hasAlert && (
+                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full animate-pulse" style={{ background: alertColor, boxShadow: `0 0 6px ${alertColor}` }} />
+                )}
+                {tabLabels[t]}
+              </button>
+            );
+          })}
         </div>
       </header>
 
@@ -548,10 +588,6 @@ export default function AdminPage() {
         )}
 
         {/* OPSLAGSTAVLE */}
-        {tab === "opslagstavle" && (() => {
-          if (typeof window !== "undefined") localStorage.setItem("announcements_seen_at", new Date().toISOString());
-          return null;
-        })()}
 
         {tab === "opslagstavle" && (
           <div className="max-w-2xl space-y-5">
@@ -758,11 +794,6 @@ export default function AdminPage() {
         )}
 
         {/* BESKEDER — org group chat */}
-        {tab === "beskeder" && (() => {
-          if (typeof window !== "undefined") localStorage.setItem("org_messages_seen_at", new Date().toISOString());
-          return null;
-        })()}
-
         {tab === "beskeder" && (
           <div className="max-w-2xl flex flex-col" style={{ height: "calc(100vh - 13rem)" }}>
             <div className="glass rounded-2xl overflow-hidden flex flex-col h-full">

@@ -214,6 +214,13 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   }, [orgId]);
 
   useEffect(() => {
+    if (activeHref === "/admin") {
+      setOrgNewCount(0);
+      setNotifications((prev) => prev.filter((n) => !n.id.startsWith("ann-") && !n.id.startsWith("orgmsg-")));
+    }
+  }, [activeHref]);
+
+  useEffect(() => {
     if (!currentUserId) return;
     const supabase = createClient();
     if (msgChannelRef.current) supabase.removeChannel(msgChannelRef.current);
