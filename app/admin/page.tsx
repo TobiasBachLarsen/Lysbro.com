@@ -10,7 +10,7 @@ type Member = { id: string; user_id: string; role: string; name: string; email: 
 type UpcomingMeeting = { id: string; title: string; date: string; time: string; duration: string | null; ownerName: string };
 type PastMeeting = { id: string; title: string; date: string; time: string; duration: string | null; ownerName: string };
 type Announcement = { id: string; content: string; authorName: string; authorAvatar: string | null; created_at: string };
-type MonthBar = { label: string; count: number };
+type MonthBar = { label: string; key: string; count: number };
 
 const FREE_SEATS = 5;
 const EXTRA_SEAT_PRICE = 99;
@@ -49,7 +49,7 @@ function MeetingBarChart({ bars }: { bars: MonthBar[] }) {
   return (
     <div className="flex items-end gap-2 h-28 pt-2">
       {bars.map((bar) => (
-        <div key={bar.label} className="flex-1 flex flex-col items-center gap-1.5">
+        <div key={bar.key} className="flex-1 flex flex-col items-center gap-1.5">
           <span className="text-[10px] font-semibold" style={{ color: bar.count > 0 ? "#a78bfa" : "transparent" }}>{bar.count || ""}</span>
           <div className="w-full rounded-t-lg transition-all duration-500 relative overflow-hidden" style={{ height: `${Math.max((bar.count / max) * 72, bar.count > 0 ? 8 : 2)}px`, background: bar.count > 0 ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.04)", border: bar.count > 0 ? "1px solid rgba(139,92,246,0.35)" : "1px solid rgba(255,255,255,0.06)" }}>
             {bar.count > 0 && <div className="absolute bottom-0 left-0 right-0 h-1 rounded-t" style={{ background: "linear-gradient(90deg, #a78bfa, #8b5cf6)" }} />}
@@ -220,7 +220,7 @@ export default function AdminPage() {
         const md = new Date(mt.date);
         return md.getFullYear() === y && md.getMonth() === mo;
       }).length;
-      bars.push({ label: DA_MONTHS[mo], count });
+      bars.push({ label: DA_MONTHS[mo], key: `${y}-${mo}`, count });
     }
     setMonthBars(bars);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PlanMeta } from "@/app/types";
@@ -58,6 +58,8 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [orgNewCount, setOrgNewCount] = useState(0);
+  const [orgId, setOrgId] = useState<string | null>(null);
+  const orgChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
   const unread = notifications.filter((n) => !n.read).length;
   const router = useRouter();
 
@@ -130,6 +132,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
       const { data: membership } = await supabase.from("organization_members")
         .select("role, org_id").eq("user_id", user.id).maybeSingle();
       setIsAdmin(membership?.role === "admin");
+      if (membership?.org_id) setOrgId(membership.org_id);
 
       if (membership?.org_id) {
         const seenAt = typeof window !== "undefined" ? localStorage.getItem("announcements_seen_at") : null;
@@ -154,6 +157,29 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
 
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (!orgId) return;
+    const supabase = createClient();
+    if (orgChannelRef.current) supabase.removeChannel(orgChannelRef.current);
+    const ch = supabase
+      .channel(`sidebar-org-${orgId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_announcements", filter: `org_id=eq.${orgId}` }, (payload) => {
+        const seenAt = typeof window !== "undefined" ? localStorage.getItem("announcements_seen_at") : null;
+        const isNew = !seenAt || new Date((payload.new as any).created_at) > new Date(seenAt);
+        if (isNew) {
+          setOrgNewCount((n) => n + 1);
+          setNotifications((prev) => {
+            const filtered = prev.filter((n) => !n.id.startsWith("ann-"));
+            const content = (payload.new as any).content ?? "";
+            return [...filtered, { id: `ann-${(payload.new as any).id}`, text: "Nyt opslag i organisationen", sub: content.slice(0, 50), color: "#f59e0b", read: false }];
+          });
+        }
+      })
+      .subscribe();
+    orgChannelRef.current = ch;
+    return () => { supabase.removeChannel(ch); };
+  }, [orgId]);
 
   useEffect(() => {
     if (plan.id !== "gratis") return;
