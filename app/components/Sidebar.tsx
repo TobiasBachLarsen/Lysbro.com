@@ -59,7 +59,9 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [orgNewCount, setOrgNewCount] = useState(0);
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const orgChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
+  const msgChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
   const unread = notifications.filter((n) => !n.read).length;
   const router = useRouter();
 
@@ -69,6 +71,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user || cancelled) return;
+      setCurrentUserId(user.id);
       setUserEmail(user.email ?? "");
       const name = user.user_metadata?.full_name ?? user.email ?? "";
       setUserInitials(name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2));
@@ -180,6 +183,33 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
     orgChannelRef.current = ch;
     return () => { supabase.removeChannel(ch); };
   }, [orgId]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    const supabase = createClient();
+    if (msgChannelRef.current) supabase.removeChannel(msgChannelRef.current);
+    const ch = supabase
+      .channel(`sidebar-messages-${currentUserId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, async (payload) => {
+        const msg = payload.new as any;
+        if (msg.receiver_id !== currentUserId) return;
+        setUnreadMessages((n) => n + 1);
+        const { data: sender } = await supabase.from("profiles").select("full_name, email").eq("id", msg.sender_id).single();
+        const senderName = sender?.full_name ?? sender?.email ?? "Nogen";
+        const notifText = msg.type === "org_invite"
+          ? `Org-invitation fra ${senderName}`
+          : msg.type === "meeting_invite"
+          ? `Mødeindvitation fra ${senderName}`
+          : `Ny besked fra ${senderName}`;
+        setNotifications((prev) => [
+          { id: `msg-${msg.id}`, text: notifText, sub: msg.content?.slice(0, 50) ?? "", color: "#a78bfa", read: false },
+          ...prev.filter((n) => n.id !== `msg-${msg.id}`),
+        ]);
+      })
+      .subscribe();
+    msgChannelRef.current = ch;
+    return () => { supabase.removeChannel(ch); };
+  }, [currentUserId]);
 
   useEffect(() => {
     if (plan.id !== "gratis") return;
