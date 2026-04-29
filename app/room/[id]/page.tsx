@@ -27,8 +27,6 @@ export default function RoomPage() {
   const [waitingGuests, setWaitingGuests] = useState<LobbyEntry[]>([]);
   const [showPanel, setShowPanel] = useState(false);
   const [seconds, setSeconds] = useState(0);
-  const [muted, setMuted] = useState(false);
-  const [videoOff, setVideoOff] = useState(false);
   const [jitsiToken, setJitsiToken] = useState<string | null>(null);
   const channelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
 
@@ -367,51 +365,6 @@ export default function RoomPage() {
         />
       )}
 
-      {/* Bottom controls */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3">
-        <button
-          onClick={() => setMuted((m) => !m)}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl transition-all"
-          style={{
-            background: muted ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.08)",
-            border: muted ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(255,255,255,0.12)",
-            color: muted ? "#f87171" : "#94a3b8",
-          }}
-        >
-          {muted ? (
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.531V19.94a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.506-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
-            </svg>
-          ) : (
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-            </svg>
-          )}
-        </button>
-
-        <button
-          onClick={() => setVideoOff((v) => !v)}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl transition-all"
-          style={{
-            background: videoOff ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.08)",
-            border: videoOff ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(255,255,255,0.12)",
-            color: videoOff ? "#f87171" : "#94a3b8",
-          }}
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-          </svg>
-        </button>
-
-        <Link href="/meetings"
-          className="flex h-12 w-12 items-center justify-center rounded-2xl transition-all"
-          style={{ background: "#ef4444", color: "#fff", boxShadow: "0 4px 20px rgba(239,68,68,0.4)" }}
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </Link>
-      </div>
 
       {/* Host: waiting room panel */}
       {isHost && showPanel && (
