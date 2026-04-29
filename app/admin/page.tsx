@@ -758,6 +758,11 @@ export default function AdminPage() {
         )}
 
         {/* BESKEDER — org group chat */}
+        {tab === "beskeder" && (() => {
+          if (typeof window !== "undefined") localStorage.setItem("org_messages_seen_at", new Date().toISOString());
+          return null;
+        })()}
+
         {tab === "beskeder" && (
           <div className="max-w-2xl flex flex-col" style={{ height: "calc(100vh - 13rem)" }}>
             <div className="glass rounded-2xl overflow-hidden flex flex-col h-full">

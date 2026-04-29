@@ -32,7 +32,7 @@ const NAV_LINKS = [
   { href: "/subscription", label: "Abonnement",  icon: "subscription" },
 ] as const;
 
-type Notif = { id: string; text: string; sub: string; color: string; read: boolean };
+type Notif = { id: string; text: string; sub: string; color: string; read: boolean; href?: string };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -60,6 +60,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   const [orgNewCount, setOrgNewCount] = useState(0);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
   const orgChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
   const msgChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
   const unread = notifications.filter((n) => !n.read).length;
@@ -72,6 +73,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user || cancelled) return;
       setCurrentUserId(user.id);
+      currentUserIdRef.current = user.id;
       setUserEmail(user.email ?? "");
       const name = user.user_metadata?.full_name ?? user.email ?? "";
       setUserInitials(name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2));
@@ -138,22 +140,39 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
       if (membership?.org_id) setOrgId(membership.org_id);
 
       if (membership?.org_id) {
-        const seenAt = typeof window !== "undefined" ? localStorage.getItem("announcements_seen_at") : null;
-        const { data: newAnns } = await supabase.from("org_announcements")
-          .select("id, content, created_at")
-          .eq("org_id", membership.org_id)
-          .order("created_at", { ascending: false })
-          .limit(10);
+        const annSeenAt = typeof window !== "undefined" ? localStorage.getItem("announcements_seen_at") : null;
+        const msgSeenAt = typeof window !== "undefined" ? localStorage.getItem("org_messages_seen_at") : null;
 
-        const unseen = (newAnns ?? []).filter(a => !seenAt || new Date(a.created_at) > new Date(seenAt));
-        setOrgNewCount(unseen.length);
+        const [{ data: newAnns }, { data: newOrgMsgs }] = await Promise.all([
+          supabase.from("org_announcements")
+            .select("id, content, created_at")
+            .eq("org_id", membership.org_id)
+            .order("created_at", { ascending: false })
+            .limit(20),
+          supabase.from("org_messages")
+            .select("id, content, created_at, sender_id")
+            .eq("org_id", membership.org_id)
+            .neq("sender_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(20),
+        ]);
 
-        if (unseen.length > 0) {
-          const latest = unseen[0];
-          setNotifications((prev) => [
-            ...prev,
-            { id: `ann-${latest.id}`, text: `${unseen.length > 1 ? `${unseen.length} nye opslag` : "Nyt opslag"} i organisationen`, sub: latest.content.slice(0, 50), color: "#f59e0b", read: false },
-          ]);
+        const unseenAnns = (newAnns ?? []).filter((a: any) => !annSeenAt || new Date(a.created_at) > new Date(annSeenAt));
+        const unseenMsgs = (newOrgMsgs ?? []).filter((m: any) => !msgSeenAt || new Date(m.created_at) > new Date(msgSeenAt));
+
+        setOrgNewCount(unseenAnns.length + unseenMsgs.length);
+
+        const orgNotifs: Notif[] = [];
+        if (unseenAnns.length > 0) {
+          const latest = unseenAnns[0];
+          orgNotifs.push({ id: `ann-${latest.id}`, text: unseenAnns.length > 1 ? `${unseenAnns.length} nye opslag på Opslagstavlen` : "Nyt opslag på Opslagstavlen", sub: latest.content.slice(0, 60), color: "#f59e0b", read: false, href: "/admin" });
+        }
+        if (unseenMsgs.length > 0) {
+          const latest = unseenMsgs[0];
+          orgNotifs.push({ id: `orgmsg-${latest.id}`, text: unseenMsgs.length > 1 ? `${unseenMsgs.length} nye beskeder i Organisationschat` : "Ny besked i Organisationschat", sub: latest.content?.slice(0, 60) ?? "", color: "#8b5cf6", read: false, href: "/admin" });
+        }
+        if (orgNotifs.length > 0) {
+          setNotifications((prev) => [...prev, ...orgNotifs]);
         }
       }
     });
@@ -168,16 +187,27 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
     const ch = supabase
       .channel(`sidebar-org-${orgId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_announcements" }, (payload) => {
-        if ((payload.new as any).org_id !== orgId) return;
+        const a = payload.new as any;
+        if (a.org_id !== orgId) return;
         const seenAt = typeof window !== "undefined" ? localStorage.getItem("announcements_seen_at") : null;
-        const isNew = !seenAt || new Date((payload.new as any).created_at) > new Date(seenAt);
-        if (!isNew) return;
-        const content = (payload.new as any).content ?? "";
+        if (seenAt && new Date(a.created_at) <= new Date(seenAt)) return;
         setOrgNewCount((n) => n + 1);
-        setNotifications((prev) => {
-          const filtered = prev.filter((n) => !n.id.startsWith("ann-"));
-          return [...filtered, { id: `ann-${(payload.new as any).id}`, text: "Nyt opslag i organisationen", sub: content.slice(0, 50), color: "#f59e0b", read: false }];
-        });
+        setNotifications((prev) => [
+          { id: `ann-${a.id}`, text: "Nyt opslag på Opslagstavlen", sub: (a.content ?? "").slice(0, 60), color: "#f59e0b", read: false, href: "/admin" },
+          ...prev.filter((n) => n.id !== `ann-${a.id}`),
+        ]);
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_messages" }, (payload) => {
+        const m = payload.new as any;
+        if (m.org_id !== orgId) return;
+        if (m.sender_id === currentUserIdRef.current) return;
+        const seenAt = typeof window !== "undefined" ? localStorage.getItem("org_messages_seen_at") : null;
+        if (seenAt && new Date(m.created_at) <= new Date(seenAt)) return;
+        setOrgNewCount((n) => n + 1);
+        setNotifications((prev) => [
+          { id: `orgmsg-${m.id}`, text: "Ny besked i Organisationschat", sub: (m.content ?? "").slice(0, 60), color: "#8b5cf6", read: false, href: "/admin" },
+          ...prev.filter((n) => n.id !== `orgmsg-${m.id}`),
+        ]);
       })
       .subscribe();
     orgChannelRef.current = ch;
@@ -426,7 +456,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
                 </div>
               )}
               {notifications.map((n) => {
-                const href = n.color === "#3b82f6" ? "/contacts" : n.color === "#f59e0b" ? "/admin" : "/messages";
+                const href = n.href ?? (n.color === "#3b82f6" ? "/contacts" : "/messages");
                 return (
                   <Link key={n.id} href={href} onClick={() => { onMobileClose?.(); setNotifOpen(false); }}
                     className="flex items-start gap-3 px-4 py-3 transition-all"
