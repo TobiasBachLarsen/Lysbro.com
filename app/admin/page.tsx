@@ -8,10 +8,14 @@ import { getInitials, AVATAR_COLORS } from "@/app/lib/utils";
 
 type Member = { id: string; user_id: string; role: string; name: string; email: string; avatar_url: string | null; meetings: number; joinedAt: string };
 type UpcomingMeeting = { id: string; title: string; date: string; time: string; duration: string | null; ownerName: string };
-type ActivityItem = { id: string; type: "join" | "meeting"; text: string; sub: string; color: string };
+type PastMeeting = { id: string; title: string; date: string; time: string; duration: string | null; ownerName: string };
+type Announcement = { id: string; content: string; authorName: string; created_at: string };
+type MonthBar = { label: string; count: number };
 
 const FREE_SEATS = 5;
 const EXTRA_SEAT_PRICE = 99;
+
+const DA_MONTHS = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
 function SeatBar({ used, free }: { used: number; free: number }) {
   const pct = Math.min((used / Math.max(free, 1)) * 100, 100);
@@ -40,9 +44,37 @@ function SeatBar({ used, free }: { used: number; free: number }) {
   );
 }
 
+function MeetingBarChart({ bars }: { bars: MonthBar[] }) {
+  const max = Math.max(...bars.map(b => b.count), 1);
+  return (
+    <div className="flex items-end gap-2 h-28 pt-2">
+      {bars.map((bar) => (
+        <div key={bar.label} className="flex-1 flex flex-col items-center gap-1.5">
+          <span className="text-[10px] font-semibold" style={{ color: bar.count > 0 ? "#a78bfa" : "transparent" }}>{bar.count || ""}</span>
+          <div className="w-full rounded-t-lg transition-all duration-500 relative overflow-hidden" style={{ height: `${Math.max((bar.count / max) * 72, bar.count > 0 ? 8 : 2)}px`, background: bar.count > 0 ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.04)", border: bar.count > 0 ? "1px solid rgba(139,92,246,0.35)" : "1px solid rgba(255,255,255,0.06)" }}>
+            {bar.count > 0 && <div className="absolute bottom-0 left-0 right-0 h-1 rounded-t" style={{ background: "linear-gradient(90deg, #a78bfa, #8b5cf6)" }} />}
+          </div>
+          <span className="text-[10px]" style={{ color: "#334155" }}>{bar.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
   return d.toLocaleDateString("da-DK", { day: "numeric", month: "short" });
+}
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Lige nu";
+  if (mins < 60) return `${mins} min siden`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} time${hrs === 1 ? "" : "r"} siden`;
+  const days = Math.floor(hrs / 24);
+  return `${days} dag${days === 1 ? "" : "e"} siden`;
 }
 
 export default function AdminPage() {
@@ -51,7 +83,11 @@ export default function AdminPage() {
   const [org, setOrg] = useState<{ id: string; name: string } | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingMeeting[]>([]);
-  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [pastMeetings, setPastMeetings] = useState<PastMeeting[]>([]);
+  const [monthBars, setMonthBars] = useState<MonthBar[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [newAnnouncement, setNewAnnouncement] = useState("");
+  const [postingAnnouncement, setPostingAnnouncement] = useState(false);
   const [loading, setLoading] = useState(true);
   const [orgMeetingsTotal, setOrgMeetingsTotal] = useState(0);
   const [userRole, setUserRole] = useState<"admin" | "member" | null>(null);
@@ -65,7 +101,7 @@ export default function AdminPage() {
   const [renaming, setRenaming] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
   const [renameLoading, setRenameLoading] = useState(false);
-  const [tab, setTab] = useState<"oversigt" | "medlemmer" | "indstillinger">("oversigt");
+  const [tab, setTab] = useState<"oversigt" | "opslagstavle" | "historik" | "medlemmer" | "indstillinger">("oversigt");
 
   useEffect(() => { loadData(); }, []);
 
@@ -91,7 +127,6 @@ export default function AdminPage() {
     const isAdmin = membership.role === "admin";
     const today = new Date().toISOString().slice(0, 10);
 
-    // Kun admins henter hele medlemslisten
     let memberList: Member[] = [];
     if (isAdmin) {
       const { data: memberRows } = await supabase.from("organization_members")
@@ -114,29 +149,18 @@ export default function AdminPage() {
           joinedAt: m.created_at,
         };
       }));
-
       setMembers(memberList);
 
       const { count: orgMeetingCount } = await supabase.from("meetings")
         .select("id", { count: "exact" }).eq("org_id", membership.org_id);
       setOrgMeetingsTotal(orgMeetingCount ?? 0);
-
-      const actItems: ActivityItem[] = memberList.slice(-5).reverse().map((m) => ({
-        id: `join-${m.id}`,
-        type: "join" as const,
-        text: m.name,
-        sub: `Tilmeldte sig ${formatDate(m.joinedAt)}`,
-        color: "#a78bfa",
-      }));
-      setActivity(actItems);
     } else {
-      // Almindeligt medlem: tæl egne org-møder
       const { count: myOrgMeetingCount } = await supabase.from("meetings")
         .select("id", { count: "exact" }).eq("org_id", membership.org_id).eq("user_id", user.id);
       setOrgMeetingsTotal(myOrgMeetingCount ?? 0);
     }
 
-    // Admin ser alle org-møder, member ser kun egne
+    // Kommende møder
     const upcomingQuery = supabase.from("meetings")
       .select("id, title, date, time, duration, user_id")
       .eq("org_id", membership.org_id)
@@ -145,16 +169,75 @@ export default function AdminPage() {
       .order("time", { ascending: true })
       .limit(5);
 
-    const { data: upcomingData } = isAdmin
-      ? await upcomingQuery
-      : await upcomingQuery.eq("user_id", user.id);
-
+    const { data: upcomingData } = isAdmin ? await upcomingQuery : await upcomingQuery.eq("user_id", user.id);
     setUpcoming((upcomingData ?? []).map((mt: any) => {
       const owner = memberList.find(m => m.user_id === mt.user_id);
       return { id: mt.id, title: mt.title, date: mt.date, time: mt.time, duration: mt.duration, ownerName: owner?.name ?? "Ukendt" };
     }));
 
+    // Historik — afholdte org-møder
+    const pastQuery = supabase.from("meetings")
+      .select("id, title, date, time, duration, user_id")
+      .eq("org_id", membership.org_id)
+      .lt("date", today)
+      .order("date", { ascending: false })
+      .limit(50);
+
+    const { data: pastData } = isAdmin ? await pastQuery : await pastQuery.eq("user_id", user.id);
+    const pastList = (pastData ?? []).map((mt: any) => {
+      const owner = memberList.find(m => m.user_id === mt.user_id);
+      return { id: mt.id, title: mt.title, date: mt.date, time: mt.time, duration: mt.duration, ownerName: owner?.name ?? "Ukendt" };
+    });
+    setPastMeetings(pastList);
+
+    // Aktivitetsdiagram — møder per måned (seneste 6 måneder)
+    const bars: MonthBar[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const y = d.getFullYear();
+      const mo = d.getMonth();
+      const count = pastList.filter(mt => {
+        const md = new Date(mt.date);
+        return md.getFullYear() === y && md.getMonth() === mo;
+      }).length;
+      bars.push({ label: DA_MONTHS[mo], count });
+    }
+    setMonthBars(bars);
+
+    // Opslagstavle
+    const { data: annRows } = await supabase.from("org_announcements")
+      .select("id, content, author_id, created_at")
+      .eq("org_id", membership.org_id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    const authorIds = [...new Set((annRows ?? []).map((a: any) => a.author_id))];
+    const { data: authorProfiles } = authorIds.length
+      ? await supabase.from("profiles").select("id, full_name, email").in("id", authorIds)
+      : { data: [] };
+
+    setAnnouncements((annRows ?? []).map((a: any) => {
+      const ap = (authorProfiles ?? []).find((p: any) => p.id === a.author_id);
+      return { id: a.id, content: a.content, authorName: ap?.full_name ?? ap?.email ?? "Ukendt", created_at: a.created_at };
+    }));
+
     setLoading(false);
+  };
+
+  const handlePostAnnouncement = async () => {
+    if (!newAnnouncement.trim() || !org) return;
+    setPostingAnnouncement(true);
+    const supabase = createClient();
+    await supabase.from("org_announcements").insert({ org_id: org.id, author_id: userId, content: newAnnouncement.trim() });
+    setNewAnnouncement("");
+    setPostingAnnouncement(false);
+    loadData();
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    await createClient().from("org_announcements").delete().eq("id", id);
+    setAnnouncements(prev => prev.filter(a => a.id !== id));
   };
 
   const handleCreate = async () => {
@@ -230,9 +313,7 @@ export default function AdminPage() {
           </div>
           <div>
             <h2 className="text-xl font-black text-white mb-2">Organisations-funktioner</h2>
-            <p className="text-sm leading-relaxed" style={{ color: "#64748b" }}>
-              Opret din organisation, inviter kolleger og administrer adgange — kun tilgængeligt på Erhverv-planen.
-            </p>
+            <p className="text-sm leading-relaxed" style={{ color: "#64748b" }}>Opret din organisation, inviter kolleger og administrer adgange — kun tilgængeligt på Erhverv-planen.</p>
           </div>
           <div className="rounded-xl p-4 text-left space-y-2" style={{ background: "rgba(34,211,238,0.06)", border: "1px solid rgba(34,211,238,0.15)" }}>
             {["Organisationsdashboard med statistik", "Inviter ubegrænsede kolleger", "Administrer roller og adgange", "Alle medlemmer får erhverv-fordele"].map((f) => (
@@ -280,8 +361,15 @@ export default function AdminPage() {
     </AppLayout>
   );
 
-  const totalMeetings = members.reduce((s, m) => s + m.meetings, 0);
   const extraSeats = Math.max(members.length - FREE_SEATS, 0);
+  const adminTabs = ["oversigt", "opslagstavle", "historik", "medlemmer", "indstillinger"] as const;
+  const memberTabs = ["oversigt", "opslagstavle", "historik"] as const;
+  const tabs = userRole === "admin" ? adminTabs : memberTabs;
+
+  const tabLabels: Record<string, string> = {
+    oversigt: "Oversigt", opslagstavle: "Opslagstavle", historik: "Historik",
+    medlemmer: "Medlemmer", indstillinger: "Indstillinger",
+  };
 
   return (
     <AppLayout activeHref="/admin">
@@ -291,12 +379,12 @@ export default function AdminPage() {
           <p className="text-xs" style={{ color: "#475569" }}>Organisationsdashboard</p>
         </div>
         <div className="flex gap-1 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-          {(userRole === "admin" ? ["oversigt", "medlemmer", "indstillinger"] as const : ["oversigt"] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)}
-              className="rounded-lg px-4 py-1.5 text-xs font-semibold capitalize transition-all"
+          {tabs.map((t) => (
+            <button key={t} onClick={() => setTab(t as any)}
+              className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
               style={tab === t ? { background: "rgba(139,92,246,0.2)", color: "#c4b5fd" } : { color: "#475569" }}
             >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+              {tabLabels[t]}
             </button>
           ))}
         </div>
@@ -304,9 +392,9 @@ export default function AdminPage() {
 
       <main className="p-8 space-y-6">
 
+        {/* OVERSIGT */}
         {tab === "oversigt" && (
           <>
-            {/* Stats row */}
             <div className={`grid gap-4 ${userRole === "admin" ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"}`}>
               {[
                 userRole === "admin" && { label: "Medlemmer", value: members.length, color: "#a78bfa", bg: "rgba(139,92,246,0.08)", border: "rgba(139,92,246,0.2)" },
@@ -321,16 +409,17 @@ export default function AdminPage() {
               ))}
             </div>
 
-            {/* Seat usage — kun admin */}
-            {userRole === "admin" && <div className="glass rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-5 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)" }}>
-                  <svg className="h-4 w-4" style={{ color: "#a78bfa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            {userRole === "admin" && (
+              <div className="glass rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-5 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)" }}>
+                    <svg className="h-4 w-4" style={{ color: "#a78bfa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                  </div>
+                  <h2 className="text-sm font-bold text-white">Pladsforbrug</h2>
                 </div>
-                <h2 className="text-sm font-bold text-white">Pladsforbrug</h2>
+                <SeatBar used={members.length} free={FREE_SEATS} />
               </div>
-              <SeatBar used={members.length} free={FREE_SEATS} />
-            </div>}
+            )}
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Kommende møder */}
@@ -354,11 +443,7 @@ export default function AdminPage() {
                         <p className="text-sm font-semibold text-white truncate">{mt.title}</p>
                         <p className="text-xs mt-0.5" style={{ color: "#475569" }}>{mt.time?.slice(0,5)} · {mt.ownerName}{mt.duration ? ` · ${mt.duration}` : ""}</p>
                       </div>
-                      <Link
-                        href={`/room/${mt.id}`}
-                        className="shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all"
-                        style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)", color: "#60a5fa" }}
-                      >
+                      <Link href={`/room/${mt.id}`} className="shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all" style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)", color: "#60a5fa" }}>
                         <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/></svg>
                         Start
                       </Link>
@@ -367,35 +452,146 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Aktivitet */}
-              <div className="glass rounded-2xl overflow-hidden">
-                <div className="flex items-center gap-3 px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              {/* Aktivitetsdiagram */}
+              <div className="glass rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-4 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                   <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.12)" }}>
-                    <svg className="h-3.5 w-3.5" style={{ color: "#a78bfa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+                    <svg className="h-3.5 w-3.5" style={{ color: "#a78bfa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
                   </div>
-                  <h2 className="text-sm font-bold text-white">Seneste aktivitet</h2>
+                  <div>
+                    <h2 className="text-sm font-bold text-white">Mødeaktivitet</h2>
+                    <p className="text-xs" style={{ color: "#475569" }}>Afholdte org-møder per måned</p>
+                  </div>
                 </div>
-                <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
-                  {activity.length === 0 ? (
-                    <p className="px-6 py-8 text-center text-sm" style={{ color: "#334155" }}>Ingen aktivitet endnu</p>
-                  ) : activity.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 px-6 py-3.5">
-                      <div className="h-2 w-2 rounded-full shrink-0" style={{ background: item.color }} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{item.text}</p>
-                        <p className="text-xs" style={{ color: "#475569" }}>{item.sub}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <MeetingBarChart bars={monthBars} />
               </div>
             </div>
           </>
         )}
 
+        {/* OPSLAGSTAVLE */}
+        {tab === "opslagstavle" && (
+          <div className="max-w-2xl space-y-5">
+            {userRole === "admin" && (
+              <div className="glass rounded-2xl p-6 space-y-4">
+                <div className="flex items-center gap-3 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)" }}>
+                    <svg className="h-4 w-4" style={{ color: "#a78bfa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+                  </div>
+                  <h2 className="text-sm font-bold text-white">Opret opslag</h2>
+                </div>
+                <textarea
+                  className="input-dark resize-none w-full"
+                  rows={3}
+                  placeholder="Skriv en besked til hele organisationen…"
+                  value={newAnnouncement}
+                  onChange={(e) => setNewAnnouncement(e.target.value)}
+                />
+                <div className="flex justify-end">
+                  <button
+                    onClick={handlePostAnnouncement}
+                    disabled={postingAnnouncement || !newAnnouncement.trim()}
+                    className="btn-gradient px-5 py-2.5 rounded-xl text-sm font-semibold"
+                    style={{ opacity: !newAnnouncement.trim() ? 0.5 : 1 }}
+                  >
+                    {postingAnnouncement ? "Sender…" : "Send opslag"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="glass rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <h2 className="text-sm font-bold text-white">Opslag</h2>
+                <span className="text-xs" style={{ color: "#475569" }}>{announcements.length} i alt</span>
+              </div>
+              <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+                {announcements.length === 0 ? (
+                  <div className="px-6 py-12 text-center">
+                    <p className="text-sm" style={{ color: "#334155" }}>Ingen opslag endnu</p>
+                    {userRole === "admin" && <p className="text-xs mt-1" style={{ color: "#1e293b" }}>Brug formularen ovenfor til at skrive til hele organisationen</p>}
+                  </div>
+                ) : announcements.map((a) => (
+                  <div key={a.id} className="px-6 py-4 group">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, #8b5cf6, #06b6d4)" }}>
+                            {getInitials(a.authorName)}
+                          </div>
+                          <span className="text-xs font-semibold text-white">{a.authorName}</span>
+                          <span className="text-xs" style={{ color: "#334155" }}>· {timeAgo(a.created_at)}</span>
+                        </div>
+                        <p className="text-sm leading-relaxed" style={{ color: "#94a3b8" }}>{a.content}</p>
+                      </div>
+                      {userRole === "admin" && (
+                        <button
+                          onClick={() => handleDeleteAnnouncement(a.id)}
+                          className="shrink-0 opacity-0 group-hover:opacity-100 rounded-lg p-1.5 transition-all"
+                          style={{ color: "#334155", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.15)" }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#f87171"; }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#334155"; }}
+                        >
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* HISTORIK */}
+        {tab === "historik" && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {[
+                { label: "Afholdte org-møder", value: pastMeetings.length, color: "#60a5fa", bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.2)" },
+                { label: "Denne måned", value: monthBars[monthBars.length - 1]?.count ?? 0, color: "#a78bfa", bg: "rgba(139,92,246,0.08)", border: "rgba(139,92,246,0.2)" },
+                { label: "Seneste møde", value: pastMeetings[0] ? formatDate(pastMeetings[0].date) : "—", color: "#22d3ee", bg: "rgba(6,182,212,0.08)", border: "rgba(6,182,212,0.2)" },
+              ].map(({ label, value, color, bg, border }) => (
+                <div key={label} className="rounded-2xl p-5" style={{ background: bg, border: `1px solid ${border}` }}>
+                  <p className="text-xs font-semibold mb-1" style={{ color }}>{label}</p>
+                  <p className="text-2xl font-black text-white truncate">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="glass rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <h2 className="text-sm font-bold text-white">Afholdte møder</h2>
+                <span className="text-xs" style={{ color: "#475569" }}>{pastMeetings.length} møder</span>
+              </div>
+              <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+                {pastMeetings.length === 0 ? (
+                  <p className="px-6 py-12 text-center text-sm" style={{ color: "#334155" }}>Ingen afholdte org-møder endnu</p>
+                ) : pastMeetings.map((mt) => (
+                  <div key={mt.id} className="flex items-center gap-4 px-6 py-3.5 transition-all hover:bg-white/[0.02]">
+                    <div className="shrink-0 rounded-xl px-2.5 py-1.5 text-center min-w-[44px]" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <p className="text-xs font-black text-white">{new Date(mt.date).getDate()}</p>
+                      <p className="text-[10px]" style={{ color: "#475569" }}>{new Date(mt.date).toLocaleDateString("da-DK", { month: "short" })}</p>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{mt.title}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
+                        {mt.time?.slice(0, 5)}{mt.ownerName !== "Ukendt" ? ` · ${mt.ownerName}` : ""}{mt.duration ? ` · ${mt.duration}` : ""}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "rgba(255,255,255,0.05)", color: "#475569", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      Afholdt
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MEDLEMMER */}
         {tab === "medlemmer" && (
           <>
-            {/* Inviter */}
             <div className="glass rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-5 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(34,211,238,0.12)" }}>
@@ -407,12 +603,7 @@ export default function AdminPage() {
                 </div>
               </div>
               <div className="relative max-w-sm">
-                <input
-                  className="input-dark"
-                  placeholder="Søg på navn eller e-mail…"
-                  value={inviteEmail}
-                  onChange={(e) => searchUsers(e.target.value)}
-                />
+                <input className="input-dark" placeholder="Søg på navn eller e-mail…" value={inviteEmail} onChange={(e) => searchUsers(e.target.value)} />
                 {inviteSearch.length > 0 && (
                   <div className="absolute z-10 left-0 right-0 mt-1 rounded-xl overflow-hidden" style={{ background: "#0d1117", border: "1px solid rgba(255,255,255,0.1)" }}>
                     {inviteSearch.map((u) => (
@@ -433,12 +624,9 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
-              {inviteDone && (
-                <p className="mt-3 text-xs animate-fade-in" style={{ color: "#4ade80" }}>✓ {inviteDone} er tilføjet til organisationen</p>
-              )}
+              {inviteDone && <p className="mt-3 text-xs animate-fade-in" style={{ color: "#4ade80" }}>✓ {inviteDone} er tilføjet til organisationen</p>}
             </div>
 
-            {/* Sædetæller kompakt */}
             <div className="flex items-center gap-3 rounded-xl px-5 py-3.5" style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.18)" }}>
               <svg className="h-4 w-4 shrink-0" style={{ color: "#a78bfa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               <p className="text-sm flex-1" style={{ color: "#94a3b8" }}>
@@ -447,7 +635,6 @@ export default function AdminPage() {
               </p>
             </div>
 
-            {/* Medlemsliste */}
             <div className="glass rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <h2 className="text-sm font-bold text-white">Alle medlemmer</h2>
@@ -467,13 +654,8 @@ export default function AdminPage() {
                       <span className="text-xs font-semibold text-white">{m.meetings}</span>
                       <span className="text-[10px]" style={{ color: "#334155" }}>møder</span>
                     </div>
-                    <div className="hidden sm:block text-xs shrink-0" style={{ color: "#334155" }}>
-                      Tilmeldt {formatDate(m.joinedAt)}
-                    </div>
-                    <select
-                      value={m.role}
-                      onChange={(e) => handleRoleChange(m.id, e.target.value)}
-                      disabled={m.user_id === userId}
+                    <div className="hidden sm:block text-xs shrink-0" style={{ color: "#334155" }}>Tilmeldt {formatDate(m.joinedAt)}</div>
+                    <select value={m.role} onChange={(e) => handleRoleChange(m.id, e.target.value)} disabled={m.user_id === userId}
                       className="rounded-lg px-2 py-1 text-xs font-semibold"
                       style={{ background: m.role === "admin" ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.06)", color: m.role === "admin" ? "#a78bfa" : "#64748b", border: "1px solid rgba(255,255,255,0.08)", cursor: m.user_id === userId ? "not-allowed" : "pointer" }}
                     >
@@ -481,11 +663,7 @@ export default function AdminPage() {
                       <option value="admin">Admin</option>
                     </select>
                     {m.user_id !== userId && (
-                      <button onClick={() => handleRemove(m.id, m.user_id)}
-                        className="shrink-0 rounded-lg p-1.5 transition-all hover:text-red-400"
-                        style={{ color: "#334155", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
-                        title="Fjern fra organisation"
-                      >
+                      <button onClick={() => handleRemove(m.id, m.user_id)} className="shrink-0 rounded-lg p-1.5 transition-all hover:text-red-400" style={{ color: "#334155", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                       </button>
                     )}
@@ -496,13 +674,13 @@ export default function AdminPage() {
           </>
         )}
 
+        {/* INDSTILLINGER */}
         {tab === "indstillinger" && (
           <div className="max-w-lg space-y-5">
-            {/* Omdøb org */}
             <div className="glass rounded-2xl p-6 space-y-4">
               <div className="flex items-center gap-3 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)" }}>
-                  <svg className="h-4 w-4" style={{ color: "#a78bfa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                  <svg className="h-4 w-4" style={{ color: "#a78bfa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
                 </div>
                 <h2 className="text-sm font-bold text-white">Organisationsoplysninger</h2>
               </div>
@@ -511,33 +689,22 @@ export default function AdminPage() {
                 {renaming ? (
                   <div className="flex gap-2">
                     <input className="input-dark flex-1" value={newOrgName} onChange={(e) => setNewOrgName(e.target.value)} autoFocus />
-                    <button onClick={handleRename} disabled={renameLoading} className="btn-gradient px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0">
-                      {renameLoading ? "Gemmer…" : "Gem"}
-                    </button>
-                    <button onClick={() => { setRenaming(false); setNewOrgName(org.name); }} className="btn-ghost px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0">
-                      Annuller
-                    </button>
+                    <button onClick={handleRename} disabled={renameLoading} className="btn-gradient px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0">{renameLoading ? "Gemmer…" : "Gem"}</button>
+                    <button onClick={() => { setRenaming(false); setNewOrgName(org.name); }} className="btn-ghost px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0">Annuller</button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 rounded-xl px-4 py-2.5 text-sm text-white" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                      {org.name}
-                    </div>
-                    <button onClick={() => setRenaming(true)} className="btn-ghost px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0">
-                      Rediger
-                    </button>
+                    <div className="flex-1 rounded-xl px-4 py-2.5 text-sm text-white" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>{org.name}</div>
+                    <button onClick={() => setRenaming(true)} className="btn-ghost px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0">Rediger</button>
                   </div>
                 )}
               </div>
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#64748b" }}>Organisations-ID</label>
-                <div className="rounded-xl px-4 py-2.5 text-xs font-mono truncate" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", color: "#334155" }}>
-                  {org.id}
-                </div>
+                <div className="rounded-xl px-4 py-2.5 text-xs font-mono truncate" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", color: "#334155" }}>{org.id}</div>
               </div>
             </div>
 
-            {/* Abonnement info */}
             <div className="glass rounded-2xl p-6 space-y-4">
               <div className="flex items-center gap-3 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(34,211,238,0.12)" }}>
@@ -548,17 +715,13 @@ export default function AdminPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-white">Erhverv</p>
-                  <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
-                    1.499 kr/md inkl. {FREE_SEATS} pladser
-                    {extraSeats > 0 && ` + ${extraSeats * EXTRA_SEAT_PRICE} kr/md for ${extraSeats} ekstra`}
-                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "#475569" }}>1.499 kr/md inkl. {FREE_SEATS} pladser{extraSeats > 0 && ` + ${extraSeats * EXTRA_SEAT_PRICE} kr/md for ${extraSeats} ekstra`}</p>
                 </div>
                 <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: "rgba(34,211,238,0.12)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.25)" }}>Aktiv</span>
               </div>
               <SeatBar used={members.length} free={FREE_SEATS} />
             </div>
 
-            {/* Farezone */}
             <div className="rounded-2xl p-6 space-y-4" style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.15)" }}>
               <div className="flex items-center gap-3 pb-4" style={{ borderBottom: "1px solid rgba(239,68,68,0.1)" }}>
                 <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(239,68,68,0.12)" }}>
