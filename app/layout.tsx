@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Agora — Europæiske videomøder",
+  title: "Lysbro — Europæiske videomøder",
   description: "Sikre, GDPR-compliant videomøder hostet i Europa. Bygget på open source.",
 };
 

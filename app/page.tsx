@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { AgoraIcon } from "@/app/components/AgoraLogo";
+import { LysbroIcon } from "@/app/components/LysbroLogo";
 
 const plans = [
   {
@@ -151,9 +151,9 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2.5">
             <div className="relative flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)", boxShadow: "0 0 20px rgba(59,130,246,0.4)" }}>
-              <AgoraIcon className="h-5 w-5" />
+              <LysbroIcon className="h-5 w-5" />
             </div>
-            <span className="text-lg font-bold tracking-tight text-white">Agora</span>
+            <span className="text-lg font-bold tracking-tight text-white">Lysbro</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium" style={{ color: "#94a3b8" }}>
@@ -207,7 +207,7 @@ export default function Home() {
               </h1>
 
               <p className="mt-6 max-w-lg text-lg leading-relaxed" style={{ color: "#94a3b8" }}>
-                Agora er en dansk videomøde-service hostet udelukkende i Europa.
+                Lysbro er en dansk videomøde-service hostet udelukkende i Europa.
                 Ingen data til USA. Ingen kompromiser.
               </p>
 
@@ -347,7 +347,7 @@ export default function Home() {
               <div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold" style={{ background: "rgba(255,255,255,0.08)", color: "#94a3b8", boxShadow: "0 0 0 2px #05070f" }}>+</div>
             </div>
             <p className="text-sm font-medium" style={{ color: "#94a3b8" }}>
-              <span className="font-bold text-white">500+</span> europæiske virksomheder bruger Agora til daglige videomøder
+              <span className="font-bold text-white">500+</span> europæiske virksomheder bruger Lysbro til daglige videomøder
             </p>
             <div className="flex items-center gap-1">
               {[1,2,3,4,5].map(i => (
@@ -366,7 +366,7 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-6">
           <div className="mb-16 text-center">
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] gradient-text">Funktioner</p>
-            <h2 className="text-4xl font-black text-white md:text-5xl">Hvorfor vælge Agora?</h2>
+            <h2 className="text-4xl font-black text-white md:text-5xl">Hvorfor vælge Lysbro?</h2>
             <p className="mt-4 max-w-xl mx-auto" style={{ color: "#94a3b8" }}>
               Samme kvalitet som de store platforme — med fuld kontrol over dine data og ingen kompromiser.
             </p>
@@ -405,7 +405,7 @@ export default function Home() {
         <div className="mx-auto max-w-3xl px-6">
           <div className="mb-14 text-center">
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] gradient-text">Sammenligning</p>
-            <h2 className="text-4xl font-black text-white md:text-5xl">Agora vs. resten</h2>
+            <h2 className="text-4xl font-black text-white md:text-5xl">Lysbro vs. resten</h2>
             <p className="mt-4" style={{ color: "#94a3b8" }}>Se hvad der adskiller os fra de amerikanske alternativer.</p>
           </div>
 
@@ -415,8 +415,8 @@ export default function Home() {
               <div />
               <div className="flex justify-center">
                 <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5" style={{ background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.3)" }}>
-                  <AgoraIcon className="h-3.5 w-3.5" />
-                  <span className="text-xs font-bold text-white">Agora</span>
+                  <LysbroIcon className="h-3.5 w-3.5" />
+                  <span className="text-xs font-bold text-white">Lysbro</span>
                 </div>
               </div>
               <p className="text-center text-xs font-semibold" style={{ color: "#475569" }}>Zoom</p>
@@ -584,11 +584,11 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-6 flex flex-col items-center justify-between gap-6 sm:flex-row">
           <div className="flex items-center gap-2.5">
             <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}>
-              <AgoraIcon className="h-4 w-4" />
+              <LysbroIcon className="h-4 w-4" />
             </div>
-            <span className="font-bold text-white">Agora</span>
+            <span className="font-bold text-white">Lysbro</span>
           </div>
-          <p className="text-sm" style={{ color: "#475569" }}>© 2026 Agora · Europæisk videomøde · GDPR-compliant</p>
+          <p className="text-sm" style={{ color: "#475569" }}>© 2026 Lysbro · Europæisk videomøde · GDPR-compliant</p>
           <nav className="flex gap-6 text-sm" style={{ color: "#475569" }}>
             <Link href="/terms" className="hover:text-white transition">Betingelser</Link>
             <a href="mailto:kontakt@agora.eu" className="hover:text-white transition">Kontakt</a>

@@ -301,7 +301,7 @@ export default function ProfilePage() {
           {[
             { label: "Påmindelser om møder", sub: "Modtag en besked 15 min før et møde starter", value: notifMeetingReminder, set: setNotifMeetingReminder },
             { label: "Ny deltager tilmeldt", sub: "Når nogen accepterer en møde-invitation", value: notifNewParticipant, set: setNotifNewParticipant },
-            { label: "Nyheder og tilbud", sub: "Opdateringer om Agora og særlige tilbud", value: notifMarketing, set: setNotifMarketing },
+            { label: "Nyheder og tilbud", sub: "Opdateringer om Lysbro og særlige tilbud", value: notifMarketing, set: setNotifMarketing },
           ].map((n) => (
             <div key={n.label} className="flex items-center justify-between gap-4 py-1">
               <div>

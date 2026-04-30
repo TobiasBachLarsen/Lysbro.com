@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "@/app/lib/supabase";
-import { AgoraIcon } from "@/app/components/AgoraLogo";
+import { LysbroIcon } from "@/app/components/LysbroLogo";
 
 type Phase = "checking" | "prejoin" | "waiting" | "admitted" | "meeting";
 
@@ -193,9 +193,9 @@ export default function RoomPage() {
           {/* Logo */}
           <div className="mb-8 flex items-center justify-center gap-2.5">
             <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)", boxShadow: "0 0 20px rgba(59,130,246,0.4)" }}>
-              <AgoraIcon className="h-5 w-5" />
+              <LysbroIcon className="h-5 w-5" />
             </div>
-            <span className="text-xl font-black tracking-tight text-white">Agora</span>
+            <span className="text-xl font-black tracking-tight text-white">Lysbro</span>
           </div>
 
           {/* Card */}
@@ -306,9 +306,9 @@ export default function RoomPage() {
         <div className="flex items-center gap-3">
           <div className="h-7 w-7 rounded-lg flex items-center justify-center"
             style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)", boxShadow: "0 0 12px rgba(59,130,246,0.4)" }}>
-            <AgoraIcon className="h-4 w-4" />
+            <LysbroIcon className="h-4 w-4" />
           </div>
-          <span className="text-sm font-black tracking-tight text-white">Agora</span>
+          <span className="text-sm font-black tracking-tight text-white">Lysbro</span>
           <div className="flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
             style={{ background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }}>
             <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: "#ef4444" }} />

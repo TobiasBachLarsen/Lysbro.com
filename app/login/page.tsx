@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/app/lib/supabase";
-import { AgoraIcon, AgoraLogoFull } from "@/app/components/AgoraLogo";
+import { LysbroIcon, LysbroLogoFull } from "@/app/components/LysbroLogo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,15 +43,15 @@ export default function LoginPage() {
           {/* Logo */}
           <Link href="/" className="mb-12 flex items-center gap-3 w-fit">
             <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)", boxShadow: "0 0 24px rgba(59,130,246,0.5)" }}>
-              <AgoraIcon className="h-6 w-6" />
+              <LysbroIcon className="h-6 w-6" />
             </div>
-            <span className="text-2xl font-black tracking-tight text-white">Agora</span>
+            <span className="text-2xl font-black tracking-tight text-white">Lysbro</span>
           </Link>
 
           {/* Full compass logo */}
           <div className="mb-10 flex justify-center">
             <div className="h-36 w-36 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)", boxShadow: "0 0 60px rgba(59,130,246,0.35)" }}>
-              <AgoraLogoFull className="h-28 w-28" />
+              <LysbroLogoFull className="h-28 w-28" />
             </div>
           </div>
 
@@ -96,9 +96,9 @@ export default function LoginPage() {
           {/* Logo (mobile) */}
           <Link href="/" className="mb-8 flex items-center gap-2 lg:hidden">
             <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}>
-              <AgoraIcon className="h-5 w-5" />
+              <LysbroIcon className="h-5 w-5" />
             </div>
-            <span className="text-lg font-bold text-white">Agora</span>
+            <span className="text-lg font-bold text-white">Lysbro</span>
           </Link>
 
           <div className="mb-8">

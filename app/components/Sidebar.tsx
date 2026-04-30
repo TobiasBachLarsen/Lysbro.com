@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { PlanMeta } from "@/app/types";
 import { PLANS, BANNER_ADS } from "@/app/lib/data";
 import { createClient } from "@/app/lib/supabase";
-import { AgoraIcon } from "@/app/components/AgoraLogo";
+import { LysbroIcon } from "@/app/components/LysbroLogo";
 
 // ── Icons ────────────────────────────────────────────────────────────────────
 
@@ -270,9 +270,9 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
           className="h-8 w-8 rounded-xl flex items-center justify-center"
           style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)", boxShadow: "0 0 16px rgba(59,130,246,0.4)" }}
         >
-          <AgoraIcon className="h-5 w-5" />
+          <LysbroIcon className="h-5 w-5" />
         </div>
-        <span className="text-lg font-black tracking-tight text-white">Agora</span>
+        <span className="text-lg font-black tracking-tight text-white">Lysbro</span>
 
         {/* Mobile close button */}
         {mobileOpen && (

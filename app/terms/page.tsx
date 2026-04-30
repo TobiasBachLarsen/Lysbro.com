@@ -5,7 +5,7 @@ export default function TermsPage() {
     <div className="min-h-screen bg-white">
       <header className="border-b border-slate-100">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-          <Link href="/" className="text-xl font-bold text-blue-600 tracking-tight">Agora</Link>
+          <Link href="/" className="text-xl font-bold text-blue-600 tracking-tight">Lysbro</Link>
           <Link href="/login" className="text-sm text-slate-500 hover:text-slate-700 transition">Log ind</Link>
         </div>
       </header>
@@ -19,15 +19,15 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold text-slate-800 mb-2">1. Generelt</h2>
             <p className="text-sm leading-relaxed">
-              Disse betingelser regulerer din brug af Agora-platformen, herunder videomøde-tjenesten og brugerportalen.
-              Ved at oprette en konto accepterer du at overholde disse betingelser. Agora drives fra Danmark og er underlagt dansk ret og EU-lovgivning.
+              Disse betingelser regulerer din brug af Lysbro-platformen, herunder videomøde-tjenesten og brugerportalen.
+              Ved at oprette en konto accepterer du at overholde disse betingelser. Lysbro drives fra Danmark og er underlagt dansk ret og EU-lovgivning.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-slate-800 mb-2">2. Abonnement og betaling</h2>
             <p className="text-sm leading-relaxed">
-              Agora tilbyder tre abonnementsplaner: Starter (19 kr./md.), Professionel (79 kr./md.) og Erhverv (199 kr./md.).
+              Lysbro tilbyder tre abonnementsplaner: Starter (19 kr./md.), Professionel (79 kr./md.) og Erhverv (199 kr./md.).
               Abonnementet faktureres månedligt forud. Du kan til enhver tid opsige eller ændre dit abonnement,
               og opsigelsen træder i kraft ved udløbet af den igangværende betalingsperiode.
             </p>
@@ -36,7 +36,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold text-slate-800 mb-2">3. Privatlivspolitik og GDPR</h2>
             <p className="text-sm leading-relaxed">
-              Agora behandler dine personoplysninger i overensstemmelse med GDPR og dansk databeskyttelseslov.
+              Lysbro behandler dine personoplysninger i overensstemmelse med GDPR og dansk databeskyttelseslov.
               Alle data opbevares udelukkende på europæiske servere hos Hetzner. Vi videregiver aldrig dine data til tredjepart uden dit samtykke,
               og ingen data overføres til lande uden for EU/EØS.
             </p>
@@ -45,15 +45,15 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold text-slate-800 mb-2">4. Acceptable brug</h2>
             <p className="text-sm leading-relaxed">
-              Du må ikke anvende Agora til ulovlige formål, spredning af skadeligt indhold eller handlinger der forstyrrer tjenestens drift.
-              Agora forbeholder sig retten til at suspendere konti, der overtræder disse retningslinjer.
+              Du må ikke anvende Lysbro til ulovlige formål, spredning af skadeligt indhold eller handlinger der forstyrrer tjenestens drift.
+              Lysbro forbeholder sig retten til at suspendere konti, der overtræder disse retningslinjer.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-slate-800 mb-2">5. Ansvarsbegrænsning</h2>
             <p className="text-sm leading-relaxed">
-              Agora stræber efter høj oppetid og stabilitet, men kan ikke garantere uafbrudt adgang til tjenesten.
+              Lysbro stræber efter høj oppetid og stabilitet, men kan ikke garantere uafbrudt adgang til tjenesten.
               Vi er ikke ansvarlige for tab opstået som følge af midlertidige nedbrud eller tekniske fejl.
             </p>
           </section>
@@ -61,7 +61,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold text-slate-800 mb-2">6. Ændringer i betingelserne</h2>
             <p className="text-sm leading-relaxed">
-              Agora kan til enhver tid opdatere disse betingelser. Væsentlige ændringer varsles via e-mail med mindst 30 dages varsel.
+              Lysbro kan til enhver tid opdatere disse betingelser. Væsentlige ændringer varsles via e-mail med mindst 30 dages varsel.
               Fortsat brug af tjenesten efter ikrafttrædelse af nye betingelser anses som accept heraf.
             </p>
           </section>

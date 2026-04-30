@@ -1,5 +1,5 @@
 // Compass rose mark — used as small icon (sidebar, favicon)
-export function AgoraIcon({ className }: { className?: string }) {
+export function LysbroIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 100 100" fill="white" xmlns="http://www.w3.org/2000/svg">
       {/* 8-pointed compass star */}
@@ -14,7 +14,7 @@ export function AgoraIcon({ className }: { className?: string }) {
 }
 
 // Full logo with circle + curved "LYSBRO" text — used on login/register
-export function AgoraLogoFull({ className }: { className?: string }) {
+export function LysbroLogoFull({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 100 100" fill="white" xmlns="http://www.w3.org/2000/svg">
       {/* 8-pointed compass star */}

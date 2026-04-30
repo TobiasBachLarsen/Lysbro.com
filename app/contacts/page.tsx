@@ -143,7 +143,7 @@ export default function ContactsPage() {
 
   const submitInvite = async () => {
     if (!inviteContact || !inviteForm.title || !inviteForm.date || !inviteForm.time) return;
-    if (!inviteContact.profile_id) { setInviteError("Denne kontakt har ingen Agora-konto"); return; }
+    if (!inviteContact.profile_id) { setInviteError("Denne kontakt har ingen Lysbro-konto"); return; }
     setInviteLoading(true);
     setInviteError("");
     const supabase = createClient();

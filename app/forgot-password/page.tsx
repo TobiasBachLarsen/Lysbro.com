@@ -22,7 +22,7 @@ export default function ForgotPasswordPage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm">
         <div className="relative h-12 mb-8">
-          <Image src="/logo.png" alt="Agora" fill className="object-contain object-center" priority />
+          <Image src="/logo.png" alt="Lysbro" fill className="object-contain object-center" priority />
         </div>
 
         {sent ? (
