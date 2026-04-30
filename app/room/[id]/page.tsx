@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import Script from "next/script";
-import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
 import { createClient } from "@/app/lib/supabase";
 import { AgoraIcon } from "@/app/components/AgoraLogo";
@@ -19,7 +17,6 @@ type LobbyEntry = {
 
 export default function RoomPage() {
   const params = useParams();
-  const router = useRouter();
   const id = (params?.id as string) ?? "demo";
   const roomName = `agora-${id}-room`;
 
@@ -31,9 +28,6 @@ export default function RoomPage() {
   const [showPanel, setShowPanel] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [jitsiToken, setJitsiToken] = useState<string | null>(null);
-  const [apiReady, setApiReady] = useState(false);
-  const jitsiContainerRef = useRef<HTMLDivElement>(null);
-  const jitsiApiRef = useRef<unknown>(null);
   const channelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
 
   // Check if current user is the host
@@ -364,21 +358,7 @@ export default function RoomPage() {
       {/* Jitsi iframe */}
       {jitsiToken && (
         <iframe
-          ref={(el) => {
-            if (!el) return;
-            const handler = (e: MessageEvent) => {
-              if (e.origin !== "https://meet.lysbro.com") return;
-              try {
-                const msg = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
-                if (msg?.action === "video-conference-left" || msg?.action === "readyToClose") {
-                  window.removeEventListener("message", handler);
-                  window.location.href = "/meetings";
-                }
-              } catch {}
-            };
-            window.addEventListener("message", handler);
-          }}
-          src={`https://meet.lysbro.com/${roomName}?jwt=${jitsiToken}#config.prejoinPageEnabled=false&config.disableDeepLinking=true&config.filmstrip.disabled=true`}
+          src={`https://meet.lysbro.com/${roomName}?jwt=${jitsiToken}#config.prejoinPageEnabled=false&config.disableDeepLinking=true&config.filmstrip.disabled=true&config.toolbarButtons=["microphone","camera","desktop","chat","tileview","fullscreen","raisehand","participants-pane","select-background","settings","videoquality","noisesuppression","toggle-camera"]`}
           allow="camera; microphone; fullscreen; display-capture; autoplay"
           className="w-full flex-1"
           style={{ border: "none" }}
