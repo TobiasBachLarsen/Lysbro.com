@@ -358,7 +358,7 @@ export default function RoomPage() {
       {/* Jitsi iframe */}
       {jitsiToken && (
         <iframe
-          src={`https://meet.lysbro.com/${roomName}?jwt=${jitsiToken}#config.prejoinPageEnabled=false&config.disableDeepLinking=true&config.filmstrip.disabled=true&config.toolbarButtons=["microphone","camera","desktop","chat","tileview","fullscreen","raisehand","participants-pane","select-background","settings","videoquality","noisesuppression","toggle-camera"]`}
+          src={`https://meet.lysbro.com/${roomName}?jwt=${jitsiToken}#config.prejoinPageEnabled=false&config.disableDeepLinking=true&config.toolbarButtons=["microphone","camera","desktop","chat","tileview","fullscreen","raisehand","participants-pane","select-background","settings","videoquality","noisesuppression","toggle-camera"]`}
           allow="camera; microphone; fullscreen; display-capture; autoplay"
           className="w-full flex-1"
           style={{ border: "none" }}
