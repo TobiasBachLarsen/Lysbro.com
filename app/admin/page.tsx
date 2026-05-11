@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import AppLayout from "@/app/components/AppLayout";
 import { createClient } from "@/app/lib/supabase";
 import { getInitials, AVATAR_COLORS } from "@/app/lib/utils";
@@ -12,6 +13,14 @@ type PastMeeting = { id: string; title: string; date: string; time: string; dura
 type Announcement = { id: string; content: string; authorName: string; authorAvatar: string | null; created_at: string };
 type MonthBar = { label: string; key: string; count: number };
 type OrgMessage = { id: string; sender_id: string; senderName: string; senderAvatar: string | null; content: string; created_at: string };
+
+type MemberRow = { id: string; user_id: string; role: string; created_at: string };
+type ProfileRow = { id: string; full_name: string | null; email: string | null; avatar_url: string | null };
+type MeetingRow = { id: string; title: string; date: string; time: string; duration: string | null; user_id: string };
+type AnnRow = { id: string; content: string; author_id: string; created_at: string };
+type OrgMsgRow = { id: string; sender_id: string; content: string; created_at: string };
+type RealtimeOrgMsg = { id: string; sender_id: string; content: string; created_at: string; org_id: string };
+type RealtimeAnn = { id: string; content: string; author_id: string; created_at: string };
 
 const FREE_SEATS = 5;
 const EXTRA_SEAT_PRICE = 99;
@@ -114,49 +123,6 @@ export default function AdminPage() {
   const orgMsgChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
   const currentUserIdRef = useRef<string>("");
 
-  useEffect(() => { loadData(); }, []);
-
-  useEffect(() => {
-    if (!org?.id) return;
-    const supabase = createClient();
-    if (orgMsgChannelRef.current) supabase.removeChannel(orgMsgChannelRef.current);
-    const ch = supabase
-      .channel(`org-messages-${org.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_messages" }, async (payload) => {
-        const m = payload.new as any;
-        if (m.org_id !== org.id) return;
-        const { data: p } = await supabase.from("profiles").select("full_name, email, avatar_url").eq("id", m.sender_id).single();
-        const newMsg: OrgMessage = { id: m.id, sender_id: m.sender_id, senderName: p?.full_name ?? p?.email ?? "Ukendt", senderAvatar: p?.avatar_url ?? null, content: m.content, created_at: m.created_at };
-        setOrgMessages((prev) => [...prev, newMsg]);
-        if (m.sender_id !== currentUserIdRef.current) setNewMsg(true);
-      })
-      .subscribe();
-    orgMsgChannelRef.current = ch;
-    return () => { supabase.removeChannel(ch); };
-  }, [org?.id]);
-
-  useEffect(() => {
-    orgMsgBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [orgMessages]);
-
-  useEffect(() => {
-    if (!org) return;
-    const supabase = createClient();
-    if (annChannelRef.current) supabase.removeChannel(annChannelRef.current);
-    const ch = supabase
-      .channel(`org-announcements-${org.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_announcements", filter: `org_id=eq.${org.id}` }, async (payload) => {
-        const a = payload.new as any;
-        const { data: p } = await supabase.from("profiles").select("full_name, email, avatar_url").eq("id", a.author_id).single();
-        const ann: Announcement = { id: a.id, content: a.content, authorName: p?.full_name ?? p?.email ?? "Ukendt", authorAvatar: p?.avatar_url ?? null, created_at: a.created_at };
-        setAnnouncements((prev) => [ann, ...prev]);
-        if (a.author_id !== currentUserIdRef.current) setNewAnn(true);
-      })
-      .subscribe();
-    annChannelRef.current = ch;
-    return () => { supabase.removeChannel(ch); };
-  }, [org?.id]);
-
   const loadData = async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -185,13 +151,13 @@ export default function AdminPage() {
       const { data: memberRows } = await supabase.from("organization_members")
         .select("id, user_id, role, created_at").eq("org_id", membership.org_id).order("created_at", { ascending: true });
 
-      const userIds = (memberRows ?? []).map((m: any) => m.user_id);
+      const userIds = (memberRows ?? []).map((m: MemberRow) => m.user_id);
       const { data: profiles } = userIds.length
         ? await supabase.from("profiles").select("id, full_name, email, avatar_url").in("id", userIds)
-        : { data: [] };
+        : { data: [] as ProfileRow[] };
 
-      memberList = await Promise.all((memberRows ?? []).map(async (m: any) => {
-        const p = (profiles ?? []).find((p: any) => p.id === m.user_id);
+      memberList = await Promise.all((memberRows ?? []).map(async (m: MemberRow) => {
+        const p = (profiles ?? []).find((p: ProfileRow) => p.id === m.user_id);
         const { count } = await supabase.from("meetings").select("id", { count: "exact" }).eq("user_id", m.user_id);
         return {
           id: m.id, user_id: m.user_id, role: m.role,
@@ -213,7 +179,6 @@ export default function AdminPage() {
       setOrgMeetingsTotal(myOrgMeetingCount ?? 0);
     }
 
-    // Kommende møder
     const upcomingQuery = supabase.from("meetings")
       .select("id, title, date, time, duration, user_id")
       .eq("org_id", membership.org_id)
@@ -223,12 +188,11 @@ export default function AdminPage() {
       .limit(5);
 
     const { data: upcomingData } = isAdmin ? await upcomingQuery : await upcomingQuery.eq("user_id", user.id);
-    setUpcoming((upcomingData ?? []).map((mt: any) => {
+    setUpcoming((upcomingData ?? []).map((mt: MeetingRow) => {
       const owner = memberList.find(m => m.user_id === mt.user_id);
       return { id: mt.id, title: mt.title, date: mt.date, time: mt.time, duration: mt.duration, ownerName: owner?.name ?? "Ukendt" };
     }));
 
-    // Historik — afholdte org-møder
     const pastQuery = supabase.from("meetings")
       .select("id, title, date, time, duration, user_id")
       .eq("org_id", membership.org_id)
@@ -237,13 +201,12 @@ export default function AdminPage() {
       .limit(50);
 
     const { data: pastData } = isAdmin ? await pastQuery : await pastQuery.eq("user_id", user.id);
-    const pastList = (pastData ?? []).map((mt: any) => {
+    const pastList = (pastData ?? []).map((mt: MeetingRow) => {
       const owner = memberList.find(m => m.user_id === mt.user_id);
       return { id: mt.id, title: mt.title, date: mt.date, time: mt.time, duration: mt.duration, ownerName: owner?.name ?? "Ukendt" };
     });
     setPastMeetings(pastList);
 
-    // Aktivitetsdiagram — møder per måned (seneste 6 måneder)
     const bars: MonthBar[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
@@ -259,56 +222,93 @@ export default function AdminPage() {
     }
     setMonthBars(bars);
 
-    // Opslagstavle
     const { data: annRows } = await supabase.from("org_announcements")
       .select("id, content, author_id, created_at")
       .eq("org_id", membership.org_id)
       .order("created_at", { ascending: false })
       .limit(20);
 
-    const authorIds = [...new Set((annRows ?? []).map((a: any) => a.author_id))];
+    const authorIds = [...new Set((annRows ?? []).map((a: AnnRow) => a.author_id))];
     const { data: authorProfiles } = authorIds.length
       ? await supabase.from("profiles").select("id, full_name, email, avatar_url").in("id", authorIds)
-      : { data: [] };
+      : { data: [] as ProfileRow[] };
 
-    setAnnouncements((annRows ?? []).map((a: any) => {
-      const ap = (authorProfiles ?? []).find((p: any) => p.id === a.author_id);
+    setAnnouncements((annRows ?? []).map((a: AnnRow) => {
+      const ap = (authorProfiles ?? []).find((p: ProfileRow) => p.id === a.author_id);
       return { id: a.id, content: a.content, authorName: ap?.full_name ?? ap?.email ?? "Ukendt", authorAvatar: ap?.avatar_url ?? null, created_at: a.created_at };
     }));
 
-    // Tjek om der er usete opslag
     const annSeenAt = typeof window !== "undefined" ? localStorage.getItem("announcements_seen_at") : null;
     const hasUnseenAnns = annSeenAt
-      ? (annRows ?? []).some((a: any) => new Date(a.created_at) > new Date(annSeenAt))
+      ? (annRows ?? []).some((a: AnnRow) => new Date(a.created_at) > new Date(annSeenAt))
       : (annRows ?? []).length > 0;
     if (hasUnseenAnns) setNewAnn(true);
 
-    // Org-gruppechat beskeder
     const { data: orgMsgRows } = await supabase.from("org_messages")
       .select("id, sender_id, content, created_at")
       .eq("org_id", membership.org_id)
       .order("created_at", { ascending: true })
       .limit(100);
 
-    const msgSenderIds = [...new Set((orgMsgRows ?? []).map((m: any) => m.sender_id))];
+    const msgSenderIds = [...new Set((orgMsgRows ?? []).map((m: OrgMsgRow) => m.sender_id))];
     const { data: msgSenderProfiles } = msgSenderIds.length
       ? await supabase.from("profiles").select("id, full_name, email, avatar_url").in("id", msgSenderIds)
-      : { data: [] };
+      : { data: [] as ProfileRow[] };
 
-    setOrgMessages((orgMsgRows ?? []).map((m: any) => {
-      const p = (msgSenderProfiles ?? []).find((p: any) => p.id === m.sender_id);
+    setOrgMessages((orgMsgRows ?? []).map((m: OrgMsgRow) => {
+      const p = (msgSenderProfiles ?? []).find((p: ProfileRow) => p.id === m.sender_id);
       return { id: m.id, sender_id: m.sender_id, senderName: p?.full_name ?? p?.email ?? "Ukendt", senderAvatar: p?.avatar_url ?? null, content: m.content, created_at: m.created_at };
     }));
 
-    // Tjek om der er usete org-beskeder
     const msgSeenAt = typeof window !== "undefined" ? localStorage.getItem("org_messages_seen_at") : null;
     const hasUnseenMsgs = msgSeenAt
-      ? (orgMsgRows ?? []).some((m: any) => m.sender_id !== user.id && new Date(m.created_at) > new Date(msgSeenAt))
-      : (orgMsgRows ?? []).some((m: any) => m.sender_id !== user.id);
+      ? (orgMsgRows ?? []).some((m: OrgMsgRow) => m.sender_id !== user.id && new Date(m.created_at) > new Date(msgSeenAt))
+      : (orgMsgRows ?? []).some((m: OrgMsgRow) => m.sender_id !== user.id);
     if (hasUnseenMsgs) setNewMsg(true);
 
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (!org?.id) return;
+    const supabase = createClient();
+    if (orgMsgChannelRef.current) supabase.removeChannel(orgMsgChannelRef.current);
+    const ch = supabase
+      .channel(`org-messages-${org.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_messages" }, async (payload) => {
+        const m = payload.new as RealtimeOrgMsg;
+        if (m.org_id !== org.id) return;
+        const { data: p } = await supabase.from("profiles").select("full_name, email, avatar_url").eq("id", m.sender_id).single();
+        const newMsg: OrgMessage = { id: m.id, sender_id: m.sender_id, senderName: p?.full_name ?? p?.email ?? "Ukendt", senderAvatar: p?.avatar_url ?? null, content: m.content, created_at: m.created_at };
+        setOrgMessages((prev) => [...prev, newMsg]);
+        if (m.sender_id !== currentUserIdRef.current) setNewMsg(true);
+      })
+      .subscribe();
+    orgMsgChannelRef.current = ch;
+    return () => { supabase.removeChannel(ch); };
+  }, [org?.id]);
+
+  useEffect(() => {
+    orgMsgBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [orgMessages]);
+
+  useEffect(() => {
+    if (!org) return;
+    const supabase = createClient();
+    if (annChannelRef.current) supabase.removeChannel(annChannelRef.current);
+    const ch = supabase
+      .channel(`org-announcements-${org.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_announcements", filter: `org_id=eq.${org.id}` }, async (payload) => {
+        const a = payload.new as RealtimeAnn;
+        const { data: p } = await supabase.from("profiles").select("full_name, email, avatar_url").eq("id", a.author_id).single();
+        const ann: Announcement = { id: a.id, content: a.content, authorName: p?.full_name ?? p?.email ?? "Ukendt", authorAvatar: p?.avatar_url ?? null, created_at: a.created_at };
+        setAnnouncements((prev) => [ann, ...prev]);
+        if (a.author_id !== currentUserIdRef.current) setNewAnn(true);
+      })
+      .subscribe();
+    annChannelRef.current = ch;
+    return () => { supabase.removeChannel(ch); };
+  }, [org]);
 
   const handlePostAnnouncement = async () => {
     if (!newAnnouncement.trim() || !org) return;
@@ -363,7 +363,7 @@ export default function AdminPage() {
     const supabase = createClient();
     const { data } = await supabase.from("profiles").select("id, full_name, email, avatar_url")
       .or(`email.ilike.%${q}%,full_name.ilike.%${q}%`).limit(5);
-    setInviteSearch((data ?? []).filter((u: any) => !members.find(m => m.user_id === u.id)));
+    setInviteSearch((data ?? []).filter((u: ProfileRow) => !members.find(m => m.user_id === u.id)));
   };
 
   const handleInvite = async (invitee: { id: string; full_name: string; email: string }) => {
@@ -483,7 +483,7 @@ export default function AdminPage() {
             const alertColor = t === "opslagstavle" ? "#f59e0b" : "#8b5cf6";
             return (
               <button key={t} onClick={() => {
-                setTab(t as any);
+                setTab(t as "oversigt" | "opslagstavle" | "historik" | "beskeder" | "medlemmer" | "indstillinger");
                 if (t === "opslagstavle") {
                   setNewAnn(false);
                   if (typeof window !== "undefined") localStorage.setItem("announcements_seen_at", new Date().toISOString());
@@ -511,15 +511,18 @@ export default function AdminPage() {
       <main className="p-8 space-y-6">
 
         {/* OVERSIGT */}
-        {tab === "oversigt" && (
+        {tab === "oversigt" && (() => {
+          type StatCard = { label: string; value: string | number; color: string; bg: string; border: string };
+          const statCards: StatCard[] = [
+            ...(userRole === "admin" ? [{ label: "Medlemmer", value: members.length, color: "#a78bfa", bg: "rgba(139,92,246,0.08)", border: "rgba(139,92,246,0.2)" }] : []),
+            { label: userRole === "admin" ? "Org-møder i alt" : "Mine org-møder", value: orgMeetingsTotal, color: "#60a5fa", bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.2)" },
+            { label: "Kommende møder", value: upcoming.length, color: "#22d3ee", bg: "rgba(6,182,212,0.08)", border: "rgba(6,182,212,0.2)" },
+            ...(userRole === "admin" ? [{ label: "Ekstra pladser", value: extraSeats === 0 ? "Ingen" : `+${extraSeats}`, color: extraSeats > 0 ? "#fbbf24" : "#4ade80", bg: extraSeats > 0 ? "rgba(251,191,36,0.08)" : "rgba(74,222,128,0.08)", border: extraSeats > 0 ? "rgba(251,191,36,0.2)" : "rgba(74,222,128,0.2)" }] : []),
+          ];
+          return (
           <>
             <div className={`grid gap-4 ${userRole === "admin" ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"}`}>
-              {[
-                userRole === "admin" && { label: "Medlemmer", value: members.length, color: "#a78bfa", bg: "rgba(139,92,246,0.08)", border: "rgba(139,92,246,0.2)" },
-                { label: userRole === "admin" ? "Org-møder i alt" : "Mine org-møder", value: orgMeetingsTotal, color: "#60a5fa", bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.2)" },
-                { label: "Kommende møder", value: upcoming.length, color: "#22d3ee", bg: "rgba(6,182,212,0.08)", border: "rgba(6,182,212,0.2)" },
-                userRole === "admin" && { label: "Ekstra pladser", value: extraSeats === 0 ? "Ingen" : `+${extraSeats}`, color: extraSeats > 0 ? "#fbbf24" : "#4ade80", bg: extraSeats > 0 ? "rgba(251,191,36,0.08)" : "rgba(74,222,128,0.08)", border: extraSeats > 0 ? "rgba(251,191,36,0.2)" : "rgba(74,222,128,0.2)" },
-              ].filter(Boolean).map(({ label, value, color, bg, border }: any) => (
+              {statCards.map(({ label, value, color, bg, border }) => (
                 <div key={label} className="rounded-2xl p-5" style={{ background: bg, border: `1px solid ${border}` }}>
                   <p className="text-xs font-semibold mb-1" style={{ color }}>{label}</p>
                   <p className="text-2xl font-black text-white truncate">{value}</p>
@@ -585,7 +588,8 @@ export default function AdminPage() {
               </div>
             </div>
           </>
-        )}
+          );
+        })()}
 
         {/* OPSLAGSTAVLE */}
 
@@ -636,7 +640,7 @@ export default function AdminPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="h-6 w-6 rounded-full overflow-hidden flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, #8b5cf6, #06b6d4)" }}>
-                            {a.authorAvatar ? <img src={a.authorAvatar} alt={a.authorName} className="h-full w-full object-cover" /> : getInitials(a.authorName)}
+                            {a.authorAvatar ? <Image src={a.authorAvatar} alt={a.authorName} width={24} height={24} className="h-full w-full object-cover" /> : getInitials(a.authorName)}
                           </div>
                           <span className="text-xs font-semibold text-white">{a.authorName}</span>
                           <span className="text-xs" style={{ color: "#334155" }}>· {timeAgo(a.created_at)}</span>
@@ -731,7 +735,7 @@ export default function AdminPage() {
                         style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
                       >
                         <div className="h-8 w-8 rounded-lg overflow-hidden flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, #8b5cf6, #ec4899)" }}>
-                          {u.avatar_url ? <img src={u.avatar_url} alt={u.full_name || u.email} className="h-full w-full object-cover" /> : getInitials(u.full_name || u.email)}
+                          {u.avatar_url ? <Image src={u.avatar_url} alt={u.full_name || u.email} width={32} height={32} className="h-full w-full object-cover" /> : getInitials(u.full_name || u.email)}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-white truncate">{u.full_name || "Unavngivet"}</p>
@@ -763,7 +767,7 @@ export default function AdminPage() {
                 {members.map((m, i) => (
                   <div key={m.id} className="flex items-center gap-4 px-6 py-4 transition-all hover:bg-white/[0.02]">
                     <div className="h-9 w-9 shrink-0 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-white" style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>
-                      {m.avatar_url ? <img src={m.avatar_url} alt={m.name} className="h-full w-full object-cover" /> : getInitials(m.name)}
+                      {m.avatar_url ? <Image src={m.avatar_url} alt={m.name} width={36} height={36} className="h-full w-full object-cover" /> : getInitials(m.name)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-white truncate">{m.name}</p>
@@ -825,7 +829,7 @@ export default function AdminPage() {
                     <div key={msg.id} className={`flex gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
                       {showHeader && (
                         <div className="h-8 w-8 shrink-0 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold text-white" style={{ background: "linear-gradient(135deg, #8b5cf6, #06b6d4)", marginTop: "0" }}>
-                          {msg.senderAvatar ? <img src={msg.senderAvatar} alt={msg.senderName} className="h-full w-full object-cover" /> : getInitials(msg.senderName)}
+                          {msg.senderAvatar ? <Image src={msg.senderAvatar} alt={msg.senderName} width={32} height={32} className="h-full w-full object-cover" /> : getInitials(msg.senderName)}
                         </div>
                       )}
                       {!showHeader && <div className="w-8 shrink-0" />}
