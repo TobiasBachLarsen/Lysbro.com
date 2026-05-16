@@ -280,8 +280,8 @@ export default function RegisterPage() {
               Log ind →
             </Link>
           </p>
-        </div>
           </>)}
+        </div>
       </div>
     </main>
   );
