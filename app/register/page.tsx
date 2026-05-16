@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -33,8 +34,8 @@ export default function RegisterPage() {
       setIsLoading(false);
       return;
     }
-    router.push("/dashboard");
-    router.refresh();
+    setConfirmed(true);
+    setIsLoading(false);
   };
 
   const strength =
@@ -105,6 +106,21 @@ export default function RegisterPage() {
       {/* ── Right panel ── */}
       <div className="flex w-full lg:w-[540px] shrink-0 flex-col items-center justify-center px-10 py-12" style={{ background: "#080b18", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="w-full max-w-sm">
+
+          {confirmed && (
+            <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+              <div className="h-16 w-16 rounded-full flex items-center justify-center" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
+                <svg className="h-8 w-8" style={{ color: "#4ade80" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-black text-white">Bekræft din e-mail</h2>
+              <p className="text-sm" style={{ color: "#64748b" }}>Vi har sendt en bekræftelsesmail til <span style={{ color: "#60a5fa" }}>{form.email}</span>. Klik på linket i mailen for at aktivere din konto.</p>
+              <Link href="/login" className="mt-4 text-sm font-medium" style={{ color: "#6366f1" }}>Gå til login →</Link>
+            </div>
+          )}
+
+          {!confirmed && (<>
 
           {/* Logo mobile */}
           <Link href="/" className="mb-8 flex items-center gap-2 lg:hidden">
@@ -265,6 +281,7 @@ export default function RegisterPage() {
             </Link>
           </p>
         </div>
+          </>)}
       </div>
     </main>
   );
