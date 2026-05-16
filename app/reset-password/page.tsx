@@ -1,30 +1,40 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/app/lib/supabase";
 import { LysbroIcon } from "@/app/components/LysbroLogo";
 
-export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
+export default function ResetPasswordPage() {
+  const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setIsLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setIsLoading(false);
-    if (error) {
-      setError("Noget gik galt. Prøv igen.");
+    if (password !== confirm) {
+      setError("Adgangskoderne matcher ikke.");
       return;
     }
-    setSent(true);
+    if (password.length < 6) {
+      setError("Adgangskoden skal være mindst 6 tegn.");
+      return;
+    }
+    setIsLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password });
+    setIsLoading(false);
+    if (error) {
+      setError("Noget gik galt. Prøv at anmode om et nyt link.");
+      return;
+    }
+    setDone(true);
+    setTimeout(() => router.push("/login"), 2000);
   };
 
   return (
@@ -38,35 +48,38 @@ export default function ForgotPasswordPage() {
           <span className="text-lg font-black tracking-tight text-white">Lysbro</span>
         </Link>
 
-        {sent ? (
+        {done ? (
           <div className="rounded-2xl p-8 text-center" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)" }}>
             <svg className="mx-auto h-12 w-12 mb-4" style={{ color: "#4ade80" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
-            <p className="text-base font-semibold text-white">E-mail sendt!</p>
-            <p className="mt-2 text-sm" style={{ color: "#94a3b8" }}>
-              Tjek din indbakke på <strong className="text-white">{email}</strong> for et link til at nulstille din adgangskode.
-            </p>
-            <Link href="/login" className="mt-6 inline-block text-sm font-semibold transition" style={{ color: "#60a5fa" }}>
-              ← Tilbage til login
-            </Link>
+            <p className="text-base font-semibold text-white">Adgangskode opdateret!</p>
+            <p className="mt-2 text-sm" style={{ color: "#94a3b8" }}>Du bliver nu sendt videre til login…</p>
           </div>
         ) : (
           <div className="rounded-2xl p-8" style={{ background: "#080b18", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <h2 className="text-xl font-bold text-white">Glemt adgangskode</h2>
-            <p className="mt-1 text-sm" style={{ color: "#64748b" }}>
-              Indtast din e-mail, så sender vi dig et nulstillingslink.
-            </p>
+            <h2 className="text-xl font-bold text-white">Ny adgangskode</h2>
+            <p className="mt-1 text-sm" style={{ color: "#64748b" }}>Vælg en ny adgangskode til din konto.</p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               <div>
-                <label htmlFor="email" className="mb-2 block text-sm font-medium" style={{ color: "#94a3b8" }}>E-mail</label>
+                <label className="mb-2 block text-sm font-medium" style={{ color: "#94a3b8" }}>Ny adgangskode</label>
                 <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="din@email.dk"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="input-dark"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium" style={{ color: "#94a3b8" }}>Bekræft adgangskode</label>
+                <input
+                  type="password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  placeholder="••••••••"
                   required
                   className="input-dark"
                 />
@@ -90,15 +103,9 @@ export default function ForgotPasswordPage() {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
                 )}
-                {isLoading ? "Sender…" : "Send nulstillingslink"}
+                {isLoading ? "Gemmer…" : "Gem ny adgangskode"}
               </button>
             </form>
-
-            <div className="mt-6 text-center">
-              <Link href="/login" className="text-sm font-medium transition" style={{ color: "#60a5fa" }}>
-                ← Tilbage til login
-              </Link>
-            </div>
           </div>
         )}
       </div>

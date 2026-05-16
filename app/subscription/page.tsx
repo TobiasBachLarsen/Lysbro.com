@@ -9,34 +9,43 @@ const plans = [
     id: "gratis",
     name: "Gratis",
     price: "0",
+    priceLabel: "gratis",
     description: "Til enkeltpersoner og studerende",
-    features: ["Op til 2 møder/måned", "Maks. 2 deltagere pr. møde", "Krypterede møder", "Europæisk hosting", "Annoncer under møder"],
+    features: ["2 møder pr. måned", "Op til 2 deltagere", "Krypterede møder", "Europæisk hosting", "Annoncer under møder"],
+    inherit: null,
     badge: null,
     color: "#60a5fa",
     bg: "rgba(59,130,246,0.08)",
     border: "rgba(59,130,246,0.25)",
+    highlighted: false,
   },
   {
     id: "pro",
     name: "Professionel",
     price: "249",
+    priceLabel: "kr./md.",
     description: "Til freelancere og små teams",
-    features: ["Ubegrænsede møder", "Maks. 25 deltagere pr. møde", "Ingen reklamer", "Mødehistorik & optagelse", "Kalenderintegration", "E-mail invitationer"],
+    features: ["Ubegrænsede møder", "Op til 25 deltagere", "Ingen reklamer", "Kalenderintegration", "E-mail invitationer"],
+    inherit: "Alt i Gratis, plus:",
     badge: "Mest populær",
     color: "#a78bfa",
     bg: "rgba(139,92,246,0.08)",
     border: "rgba(139,92,246,0.25)",
+    highlighted: true,
   },
   {
     id: "erhverv",
     name: "Erhverv",
     price: "1.499",
-    description: "Til større organisationer",
-    features: ["Ubegrænsede møder", "Op til 100+ deltagere", "Ingen reklamer", "GDPR-databehandleraftale", "SSO / SAML-login", "Admin-dashboard", "5 org-brugere inkluderet", "+ 99 kr/md per ekstra bruger"],
+    priceLabel: "kr./md. inkl. 5 brugere",
+    description: "Til organisationer med høje krav",
+    features: ["100+ deltagere", "GDPR-databehandleraftale", "Admin-dashboard & SLA", "5 org-brugere inkl. · +99 kr/md per ekstra"],
+    inherit: "Alt i Professionel, plus:",
     badge: null,
     color: "#22d3ee",
     bg: "rgba(6,182,212,0.08)",
     border: "rgba(6,182,212,0.25)",
+    highlighted: false,
   },
 ];
 
@@ -119,10 +128,13 @@ export default function SubscriptionPage() {
 
                   <div className="flex items-end gap-1 mb-5">
                     <span className="text-4xl font-black text-white">{plan.price}</span>
-                    <span className="mb-1 text-sm" style={{ color: "#475569" }}>{plan.id === "gratis" ? "gratis" : "kr./md."}</span>
+                    <span className="mb-1 text-sm" style={{ color: "#475569" }}>{plan.priceLabel}</span>
                   </div>
 
                   <ul className="flex-1 space-y-2.5">
+                    {plan.inherit && (
+                      <li className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "#475569" }}>{plan.inherit}</li>
+                    )}
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-center gap-2.5 text-xs" style={{ color: "#94a3b8" }}>
                         <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full" style={{ background: plan.bg, border: `1px solid ${plan.border}` }}>

@@ -256,7 +256,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   const sidebarContent = (

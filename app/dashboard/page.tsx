@@ -71,14 +71,7 @@ export default function DashboardPage() {
           <p className="text-xs" style={{ color: "#475569" }}>{new Date().toLocaleDateString("da-DK", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
         </div>
         <div className="flex gap-3">
-          <button onClick={handleStartMeeting} disabled={starting} className="btn-gradient flex items-center gap-2 px-4 py-2 text-sm rounded-xl" style={{ opacity: starting ? 0.75 : 1 }}>
-            {starting
-              ? <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-              : <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/></svg>
-            }
-            {starting ? "Starter…" : "Start møde nu"}
-          </button>
-          <Link href="/meetings/new" className="btn-ghost flex items-center gap-2 px-4 py-2 text-sm rounded-xl">
+<Link href="/meetings/new" className="btn-gradient flex items-center gap-2 px-4 py-2 text-sm rounded-xl">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
             Planlæg
           </Link>

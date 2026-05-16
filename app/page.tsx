@@ -15,28 +15,31 @@ const plans = [
     cta: "Opret gratis konto",
     href: "/register",
     highlighted: false,
+    inherit: null,
   },
   {
     name: "Professionel",
     price: "249",
     priceLabel: "kr./md.",
     description: "Til freelancere og små teams",
-    features: ["Ubegrænsede møder", "Op til 25 deltagere", "Ingen reklamer", "Mødeoptagelse (30 dage)", "Kalenderintegration", "E-mail invitationer"],
+    features: ["Ubegrænsede møder", "Op til 25 deltagere", "Ingen reklamer", "Kalenderintegration", "E-mail invitationer"],
     note: null,
     cta: "Vælg Professionel",
     href: "/register",
     highlighted: true,
+    inherit: "Alt i Gratis, plus:",
   },
   {
     name: "Erhverv",
     price: "1.499",
     priceLabel: "kr./md. inkl. 5 brugere",
     description: "Til organisationer med høje krav",
-    features: ["Ubegrænsede møder", "100+ deltagere", "Ingen reklamer", "GDPR-databehandleraftale", "SSO / SAML-login", "Admin-dashboard & SLA", "5 org-brugere inkl. · +99 kr/md per ekstra"],
+    features: ["100+ deltagere", "GDPR-databehandleraftale", "Admin-dashboard & SLA", "5 org-brugere inkl. · +99 kr/md per ekstra"],
     note: null,
     cta: "Kontakt os",
     href: "#contact",
     highlighted: false,
+    inherit: "Alt i Professionel, plus:",
   },
 ];
 
@@ -92,7 +95,6 @@ const comparisonRows = [
   { feature: "Open source",             agora: true,  zoom: false, teams: false },
   { feature: "End-to-end kryptering",   agora: true,  zoom: null,  teams: false },
   { feature: "Gratis plan",             agora: true,  zoom: true,  teams: true  },
-  { feature: "Ingen reklamer (gratis)", agora: false, zoom: false, teams: true  },
   { feature: "Ingen datadeling med tredjeparter", agora: true, zoom: false, teams: false },
 ];
 
@@ -330,7 +332,7 @@ export default function Home() {
                 <span className="text-base">🇪🇺</span>
                 <div>
                   <p className="text-[11px] font-bold text-white">EU-hosted</p>
-                  <p className="text-[10px]" style={{ color: "#475569" }}>Frankfurt, DE</p>
+                  <p className="text-[10px]" style={{ color: "#475569" }}>Falkenstein, DE</p>
                 </div>
               </div>
             </div>
@@ -505,6 +507,9 @@ export default function Home() {
                 </div>
 
                 <ul className="mb-8 flex-1 space-y-3.5">
+                  {plan.inherit && (
+                    <li className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "#475569" }}>{plan.inherit}</li>
+                  )}
                   {plan.features.map((feat) => (
                     <li key={feat} className="flex items-center gap-3 text-sm">
                       <svg className="h-4 w-4 shrink-0" style={{ color: plan.highlighted ? "#06b6d4" : "#3b82f6" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

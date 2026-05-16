@@ -270,6 +270,12 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
+    const init = async () => { await loadData(); };
+    init();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     if (!org?.id) return;
     const supabase = createClient();
     if (orgMsgChannelRef.current) supabase.removeChannel(orgMsgChannelRef.current);

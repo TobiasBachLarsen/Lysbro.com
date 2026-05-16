@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppLayout from "@/app/components/AppLayout";
@@ -9,7 +9,11 @@ import { createClient } from "@/app/lib/supabase";
 
 export default function NewMeetingPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ title: "", date: "", time: "", duration: "60", description: "", invites: "" });
+  const [form, setForm] = useState({ title: "", date: "", time: "", duration: "60", description: "" });
+  const [inviteList, setInviteList] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [inviteInput, setInviteInput] = useState("");
+  const [inviteSuggestions, setInviteSuggestions] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
+  const inviteRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null);
@@ -33,6 +37,24 @@ export default function NewMeetingPage() {
   const set = (field: string) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const searchInvite = async (q: string) => {
+    setInviteInput(q);
+    if (q.length < 2) { setInviteSuggestions([]); return; }
+    const supabase = createClient();
+    const { data } = await supabase.from("profiles").select("id, full_name, email")
+      .or(`email.ilike.%${q}%,full_name.ilike.%${q}%`).limit(5);
+    const already = inviteList.map((i) => i.id);
+    setInviteSuggestions((data ?? []).filter((p: { id: string }) => !already.includes(p.id)));
+  };
+
+  const addInvite = (p: { id: string; full_name: string | null; email: string }) => {
+    setInviteList((prev) => [...prev, { id: p.id, name: p.full_name ?? p.email, email: p.email }]);
+    setInviteInput("");
+    setInviteSuggestions([]);
+  };
+
+  const removeInvite = (id: string) => setInviteList((prev) => prev.filter((i) => i.id !== id));
 
   const applyTemplate = (t: typeof MEETING_TEMPLATES[0]) => {
     setForm((prev) => ({ ...prev, title: t.title, time: t.time, duration: t.duration, description: t.description, invites: t.invites }));
@@ -58,11 +80,8 @@ export default function NewMeetingPage() {
 
     if (error) { setIsLoading(false); return; }
 
-    // Send mødeinvitation via beskeder til alle inviterede e-mails
-    const emails = form.invites.split("\n").map((e) => e.trim()).filter((e) => e.includes("@"));
-    if (emails.length > 0) {
-      const { data: profiles } = await supabase.from("profiles").select("id, email").in("email", emails);
-      const invites = (profiles ?? []).map((p: { id: string; email: string }) => ({
+    if (inviteList.length > 0) {
+      const invites = inviteList.map((p) => ({
         sender_id: user.id,
         receiver_id: p.id,
         content: `Mødeindvitation: ${form.title}`,
@@ -70,7 +89,7 @@ export default function NewMeetingPage() {
         meeting_data: { title: form.title, date: form.date, time: form.time, meeting_id: meeting?.id },
         invite_status: "pending",
       }));
-      if (invites.length > 0) await supabase.from("messages").insert(invites);
+      await supabase.from("messages").insert(invites);
     }
 
     setIsLoading(false);
@@ -229,18 +248,56 @@ export default function NewMeetingPage() {
                   <h2 className="text-sm font-semibold text-white">Invitationer</h2>
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#64748b" }}>E-mail adresser</label>
-                  <textarea
-                    value={form.invites}
-                    onChange={set("invites")}
-                    placeholder={"person1@firma.dk\nperson2@firma.dk"}
-                    rows={4}
-                    className="input-dark resize-none"
-                    style={{ fontFamily: "ui-monospace, 'Cascadia Code', monospace", fontSize: "0.8125rem" }}
-                  />
+                <div ref={inviteRef}>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#64748b" }}>Inviter deltagere</label>
+
+                  {/* Tags */}
+                  {inviteList.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {inviteList.map((p) => (
+                        <span key={p.id} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium" style={{ background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.3)", color: "#93c5fd" }}>
+                          {p.name}
+                          <button type="button" onClick={() => removeInvite(p.id)} style={{ color: "#60a5fa" }}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Search input */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={inviteInput}
+                      onChange={(e) => searchInvite(e.target.value)}
+                      placeholder="Søg på navn eller e-mail…"
+                      className="input-dark"
+                    />
+                    {inviteSuggestions.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full mt-1 rounded-xl overflow-hidden z-20" style={{ background: "#0d1117", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+                        {inviteSuggestions.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => addInvite(p)}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all"
+                            style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                          >
+                            <div className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}>
+                              {(p.full_name ?? p.email)[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-white">{p.full_name ?? p.email}</p>
+                              <p className="text-xs" style={{ color: "#475569" }}>{p.email}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <p className="mt-2 text-xs" style={{ color: "#334155" }}>
-                    Én e-mail per linje. Deltagerne modtager en invitation med mødelink og RSVP-mulighed.
+                    Deltagerne modtager en invitation med mødelink og RSVP-mulighed.
                   </p>
                 </div>
               </div>
