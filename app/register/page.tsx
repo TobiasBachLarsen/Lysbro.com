@@ -30,7 +30,7 @@ export default function RegisterPage() {
       options: { data: { full_name: form.name } },
     });
     if (error) {
-      setError(error.message === "User already registered" ? "Der findes allerede en konto med denne e-mail." : error.message);
+      setError(error.message === "User already registered" ? "Der findes allerede en konto med denne e-mail." : (typeof error.message === "string" ? error.message : "Der opstod en fejl. Prøv igen."));
       setIsLoading(false);
       return;
     }
@@ -97,7 +97,7 @@ export default function RegisterPage() {
               ))}
             </div>
             <div className="mt-5 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-              <p className="text-xs" style={{ color: "#475569" }}>Starter-plan · 19 kr./md. efter prøveperioden · Ingen binding</p>
+              <p className="text-xs" style={{ color: "#475569" }}>Gratis-plan · Opgrader når du er klar · Ingen binding</p>
             </div>
           </div>
         </div>
