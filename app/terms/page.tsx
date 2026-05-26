@@ -70,7 +70,7 @@ export default function TermsPage() {
             <h2 className="text-lg font-semibold text-slate-800 mb-2">7. Kontakt</h2>
             <p className="text-sm leading-relaxed">
               Har du spørgsmål til disse betingelser, kan du kontakte os på{" "}
-              <a href="mailto:kontakt@agora.eu" className="text-blue-600 hover:underline">kontakt@agora.eu</a>.
+              <a href="mailto:kontakt@lysbro.dk" className="text-blue-600 hover:underline">kontakt@lysbro.dk</a>.
             </p>
           </section>
 
