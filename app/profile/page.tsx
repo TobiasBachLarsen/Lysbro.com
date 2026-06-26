@@ -169,10 +169,8 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-all"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-all hover-blue-btn"
                   style={{ background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.3)" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(59,130,246,0.25)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(59,130,246,0.15)"; }}
                 >
                   Vælg billede
                 </button>
@@ -180,10 +178,8 @@ export default function ProfilePage() {
                   <button
                     type="button"
                     onClick={handleRemoveAvatar}
-                    className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
+                    className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all hover-red-btn"
                     style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.2)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.1)"; }}
                   >
                     Fjern
                   </button>

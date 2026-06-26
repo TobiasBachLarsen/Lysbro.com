@@ -101,15 +101,11 @@ export default function CalendarPage() {
           <div className="xl:col-span-2 glass rounded-2xl overflow-hidden">
             {/* Month nav */}
             <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <button onClick={prevMonth} className="flex h-8 w-8 items-center justify-center rounded-lg transition-all" style={{ color: "#64748b" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLButtonElement).style.color = "#fff"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#64748b"; }}>
+              <button onClick={prevMonth} className="flex h-8 w-8 items-center justify-center rounded-lg transition-all hover-icon-btn" style={{ color: "#64748b" }}>
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
               </button>
               <h2 className="text-base font-bold text-white">{MONTHS[month]} {year}</h2>
-              <button onClick={nextMonth} className="flex h-8 w-8 items-center justify-center rounded-lg transition-all" style={{ color: "#64748b" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLButtonElement).style.color = "#fff"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#64748b"; }}>
+              <button onClick={nextMonth} className="flex h-8 w-8 items-center justify-center rounded-lg transition-all hover-icon-btn" style={{ color: "#64748b" }}>
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
               </button>
             </div>
@@ -132,7 +128,7 @@ export default function CalendarPage() {
                   <button
                     key={idx}
                     onClick={() => setSelectedDay(day === selectedDay ? null : day)}
-                    className="relative flex flex-col items-center rounded-xl py-2 transition-all"
+                    className={`relative flex flex-col items-center rounded-xl py-2 transition-all ${!isSelected ? "cal-day-inactive" : ""}`}
                     style={isSelected ? {
                       background: "linear-gradient(135deg, rgba(59,130,246,0.25), rgba(6,182,212,0.15))",
                       border: "1px solid rgba(59,130,246,0.4)",
@@ -142,8 +138,6 @@ export default function CalendarPage() {
                     } : {
                       border: "1px solid transparent",
                     }}
-                    onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)"; }}
-                    onMouseLeave={(e) => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = isToday ? "rgba(59,130,246,0.1)" : "transparent"; }}
                   >
                     <span className="text-sm font-semibold" style={{ color: isSelected ? "#fff" : isToday ? "#60a5fa" : "#94a3b8" }}>{day}</span>
                     {hasMeeting && (

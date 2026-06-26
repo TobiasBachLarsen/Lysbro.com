@@ -656,10 +656,8 @@ export default function AdminPage() {
                       {userRole === "admin" && (
                         <button
                           onClick={() => handleDeleteAnnouncement(a.id)}
-                          className="shrink-0 opacity-0 group-hover:opacity-100 rounded-lg p-1.5 transition-all"
+                          className="shrink-0 opacity-0 group-hover:opacity-100 rounded-lg p-1.5 transition-all hover-danger"
                           style={{ color: "#334155", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.15)" }}
-                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#f87171"; }}
-                          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#334155"; }}
                         >
                           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
@@ -947,10 +945,8 @@ export default function AdminPage() {
                   <p className="text-xs mt-1" style={{ color: "#64748b" }}>Fjerner alle medlemmer og sletter organisationen permanent. Kan ikke fortrydes.</p>
                 </div>
                 <button
-                  className="shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition-all"
+                  className="shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition-all hover-red-btn"
                   style={{ background: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.2)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.1)"; }}
                   onClick={() => alert("Kontakt support for at slette din organisation.")}
                 >
                   Slet organisation

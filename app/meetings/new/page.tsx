@@ -100,10 +100,7 @@ export default function NewMeetingPage() {
   return (
     <AppLayout activeHref="/meetings">
       <header className="sticky top-0 z-30 flex h-16 items-center px-8" style={{ background: "rgba(5,7,15,0.85)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <Link href="/meetings" className="flex items-center gap-2 text-sm font-medium transition mr-6" style={{ color: "#64748b" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "#94a3b8")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "#64748b")}
-        >
+        <Link href="/meetings" className="flex items-center gap-2 text-sm font-medium transition mr-6 hover-muted" style={{ color: "#64748b" }}>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
           Tilbage
         </Link>
@@ -126,7 +123,7 @@ export default function NewMeetingPage() {
                     key={t.label}
                     type="button"
                     onClick={() => applyTemplate(t)}
-                    className="flex flex-col items-start gap-1.5 rounded-xl p-3 text-left transition-all"
+                    className={`flex flex-col items-start gap-1.5 rounded-xl p-3 text-left transition-all ${appliedTemplate !== t.label ? "hover-surface" : ""}`}
                     style={appliedTemplate === t.label ? {
                       background: "rgba(59,130,246,0.15)",
                       border: "1px solid rgba(59,130,246,0.35)",
@@ -134,8 +131,6 @@ export default function NewMeetingPage() {
                       background: "rgba(255,255,255,0.03)",
                       border: "1px solid rgba(255,255,255,0.07)",
                     }}
-                    onMouseEnter={(e) => { if (appliedTemplate !== t.label) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
-                    onMouseLeave={(e) => { if (appliedTemplate !== t.label) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.03)"; }}
                   >
                     <span className="text-lg">{t.icon}</span>
                     <span className="text-xs font-semibold text-white leading-tight">{t.label}</span>
@@ -279,10 +274,8 @@ export default function NewMeetingPage() {
                             key={p.id}
                             type="button"
                             onClick={() => addInvite(p)}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all"
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all hover-surface"
                             style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                           >
                             <div className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}>
                               {(p.full_name ?? p.email)[0].toUpperCase()}

@@ -81,10 +81,7 @@ export default function MeetingDetailPage() {
     <AppLayout activeHref="/meetings">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between px-8" style={{ background: "rgba(5,7,15,0.85)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="flex items-center gap-4">
-          <Link href="/meetings" className="flex items-center gap-1.5 text-sm font-medium transition" style={{ color: "#64748b" }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "#94a3b8")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "#64748b")}
-          >
+          <Link href="/meetings" className="flex items-center gap-1.5 text-sm font-medium transition hover-muted" style={{ color: "#64748b" }}>
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
             Tilbage
           </Link>

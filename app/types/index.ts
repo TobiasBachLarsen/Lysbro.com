@@ -1,5 +1,56 @@
 export type PlanId = "gratis" | "pro" | "erhverv";
 
+// ── DB row shapes returned from Supabase queries ──────────────────────────────
+
+export interface ContactRow {
+  id: string;
+  user_id: string;
+  name: string;
+  email: string;
+}
+
+export interface ProfileRow {
+  id: string;
+  full_name: string | null;
+  email: string;
+  avatar_url: string | null;
+}
+
+export interface ContactRequestRow {
+  id: string;
+  sender_id: string;
+}
+
+export interface InviteMessageRow {
+  id: string;
+  sender_id: string;
+  meeting_data: { title?: string; org_name?: string } | null;
+}
+
+export interface OrgAnnouncementPayload {
+  id: string;
+  org_id: string;
+  content: string;
+  created_at: string;
+}
+
+export interface OrgMessagePayload {
+  id: string;
+  org_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+}
+
+export interface MessagePayload {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  type?: string;
+  created_at: string;
+}
+
 export interface PlanMeta {
   id: PlanId;
   label: string;

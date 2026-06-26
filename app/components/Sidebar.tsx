@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { PlanMeta } from "@/app/types";
+import type { PlanMeta, ContactRequestRow, InviteMessageRow, ProfileRow, OrgAnnouncementPayload, OrgMessagePayload, MessagePayload } from "@/app/types";
 import { PLANS, BANNER_ADS } from "@/app/lib/data";
 import { createClient } from "@/app/lib/supabase";
 import { LysbroIcon } from "@/app/components/LysbroLogo";
@@ -86,10 +86,10 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         .select("id, sender_id", { count: "exact" }).eq("receiver_id", user.id).eq("status", "pending");
       setPendingRequests(reqCount ?? 0);
 
-      const senderIds = (contactReqs ?? []).map((r: any) => r.sender_id);
+      const senderIds = (contactReqs ?? []).map((r: ContactRequestRow) => r.sender_id);
       const { data: senderProfiles } = senderIds.length
         ? await supabase.from("profiles").select("id, full_name").in("id", senderIds)
-        : { data: [] };
+        : { data: [] as Pick<ProfileRow, "id" | "full_name">[] };
 
       const { data: inviteMsgs } = await supabase.from("messages")
         .select("id, sender_id, meeting_data")
@@ -104,24 +104,24 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         .eq("invite_status", "pending");
 
       const allSenderIds = [...new Set([
-        ...(inviteMsgs ?? []).map((m: any) => m.sender_id),
-        ...(orgInviteMsgs ?? []).map((m: any) => m.sender_id),
+        ...((inviteMsgs ?? []) as InviteMessageRow[]).map((m) => m.sender_id),
+        ...((orgInviteMsgs ?? []) as InviteMessageRow[]).map((m) => m.sender_id),
       ])];
       const { data: inviteSenders } = allSenderIds.length
         ? await supabase.from("profiles").select("id, full_name").in("id", allSenderIds)
-        : { data: [] };
+        : { data: [] as Pick<ProfileRow, "id" | "full_name">[] };
 
       const notifs: Notif[] = [
-        ...(contactReqs ?? []).map((r: any) => {
-          const p = (senderProfiles ?? []).find((p: any) => p.id === r.sender_id);
+        ...((contactReqs ?? []) as ContactRequestRow[]).map((r) => {
+          const p = (senderProfiles ?? []).find((p) => p.id === r.sender_id);
           return { id: r.id, text: "Ny kontaktanmodning", sub: p?.full_name ?? "Ukendt bruger", color: "#3b82f6", read: false };
         }),
-        ...(inviteMsgs ?? []).map((m: any) => {
-          const p = (inviteSenders ?? []).find((p: any) => p.id === m.sender_id);
+        ...((inviteMsgs ?? []) as InviteMessageRow[]).map((m) => {
+          const p = (inviteSenders ?? []).find((p) => p.id === m.sender_id);
           return { id: m.id, text: `Mødeindvitation: ${m.meeting_data?.title ?? "Møde"}`, sub: `Fra ${p?.full_name ?? "Ukendt"}`, color: "#a78bfa", read: false };
         }),
-        ...(orgInviteMsgs ?? []).map((m: any) => {
-          const p = (inviteSenders ?? []).find((p: any) => p.id === m.sender_id);
+        ...((orgInviteMsgs ?? []) as InviteMessageRow[]).map((m) => {
+          const p = (inviteSenders ?? []).find((p) => p.id === m.sender_id);
           return { id: m.id, text: `Org-invitation: ${m.meeting_data?.org_name ?? "Organisation"}`, sub: `Fra ${p?.full_name ?? "Ukendt"}`, color: "#22d3ee", read: false };
         }),
       ];
@@ -190,7 +190,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
     const ch = supabase
       .channel(`sidebar-org-${orgId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_announcements" }, (payload) => {
-        const a = payload.new as any;
+        const a = payload.new as OrgAnnouncementPayload;
         if (a.org_id !== orgId) return;
         setOrgNewCount((n) => n + 1);
         setNotifications((prev) => [
@@ -199,7 +199,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         ]);
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "org_messages" }, (payload) => {
-        const m = payload.new as any;
+        const m = payload.new as OrgMessagePayload;
         if (m.org_id !== orgId) return;
         if (m.sender_id === currentUserIdRef.current) return;
         setOrgNewCount((n) => n + 1);
@@ -227,7 +227,7 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
     const ch = supabase
       .channel(`sidebar-messages-${currentUserId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, async (payload) => {
-        const msg = payload.new as any;
+        const msg = payload.new as MessagePayload;
         if (msg.receiver_id !== currentUserId) return;
         setUnreadMessages((n) => n + 1);
         const { data: sender } = await supabase.from("profiles").select("full_name, email").eq("id", msg.sender_id).single();
@@ -278,10 +278,8 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         {mobileOpen && (
           <button
             onClick={onMobileClose}
-            className="ml-auto flex h-7 w-7 items-center justify-center rounded-lg transition-all"
+            className="ml-auto flex h-7 w-7 items-center justify-center rounded-lg transition-all hover-muted"
             style={{ color: "#475569" }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "#94a3b8")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "#475569")}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -299,24 +297,12 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
               key={href}
               href={href}
               onClick={onMobileClose}
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all"
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${active ? "" : "nav-inactive"}`}
               style={
                 active
                   ? { background: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(6,182,212,0.12))", border: "1px solid rgba(59,130,246,0.3)", color: "#ffffff" }
                   : { color: "#64748b", border: "1px solid transparent" }
               }
-              onMouseEnter={(e) => {
-                if (!active) {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.05)";
-                  (e.currentTarget as HTMLAnchorElement).style.color = "#94a3b8";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!active) {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
-                  (e.currentTarget as HTMLAnchorElement).style.color = "#64748b";
-                }
-              }}
             >
               <span style={{ color: active ? "#60a5fa" : "inherit" }}>
                 {Icons[icon as keyof typeof Icons]}
@@ -341,12 +327,10 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
           const active = activeHref === "/admin";
           return (
             <Link href="/admin" onClick={onMobileClose}
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all mx-0"
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all mx-0 ${active ? "" : "nav-inactive"}`}
               style={active
                 ? { background: "linear-gradient(135deg, rgba(139,92,246,0.2), rgba(236,72,153,0.12))", border: "1px solid rgba(139,92,246,0.3)", color: "#ffffff" }
                 : { color: "#64748b", border: "1px solid transparent" }}
-              onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLAnchorElement).style.color = "#94a3b8"; } }}
-              onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "#64748b"; } }}
             >
               <span className="relative" style={{ color: active ? "#a78bfa" : "inherit" }}>
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/></svg>
@@ -428,10 +412,8 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
         <div className="relative">
           <button
             onClick={() => setNotifOpen((o) => !o)}
-            className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all"
+            className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all nav-inactive"
             style={{ color: notifOpen ? "#94a3b8" : "#64748b", border: "1px solid transparent", background: notifOpen ? "rgba(255,255,255,0.05)" : "transparent" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLButtonElement).style.color = "#94a3b8"; }}
-            onMouseLeave={(e) => { if (!notifOpen) { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#64748b"; } }}
           >
             <div className="flex items-center gap-3">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -465,10 +447,8 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
                 const href = n.href ?? (n.color === "#3b82f6" ? "/contacts" : "/messages");
                 return (
                   <Link key={n.id} href={href} onClick={() => { onMobileClose?.(); setNotifOpen(false); }}
-                    className="flex items-start gap-3 px-4 py-3 transition-all"
+                    className="flex items-start gap-3 px-4 py-3 transition-all hover-surface"
                     style={{ opacity: n.read ? 0.5 : 1, borderBottom: "1px solid rgba(255,255,255,0.04)" }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.03)")}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = "transparent")}
                   >
                     <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: n.color }} />
                     <div className="flex-1 min-w-0">
@@ -499,10 +479,8 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
           </div>
           <button
             onClick={handleSignOut}
-            className="transition"
+            className="transition hover-danger"
             style={{ color: "#475569" }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "#f87171")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "#475569")}
             title="Log ud"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

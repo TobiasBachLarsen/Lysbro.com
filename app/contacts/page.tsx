@@ -40,13 +40,16 @@ export default function ContactsPage() {
       supabase.from("contact_requests").select("id, sender_id, created_at").eq("receiver_id", user.id).eq("status", "pending"),
     ]);
 
-    const contactEmails = (contactData ?? []).map((c: any) => c.email).filter(Boolean);
+    type ContactRaw = { id: string; user_id: string; name: string; email: string };
+    type ProfileRaw = { id: string; email: string; avatar_url: string | null };
+
+    const contactEmails = (contactData ?? [] as ContactRaw[]).map((c) => c.email).filter(Boolean);
     const { data: contactProfiles } = contactEmails.length
       ? await supabase.from("profiles").select("id, email, avatar_url").in("email", contactEmails)
-      : { data: [] };
+      : { data: [] as ProfileRaw[] };
 
-    setContacts((contactData ?? []).map((c: any, i: number) => {
-      const profile = (contactProfiles ?? []).find((p: any) => p.email === c.email);
+    setContacts(((contactData ?? []) as ContactRaw[]).map((c, i) => {
+      const profile = (contactProfiles ?? [] as ProfileRaw[]).find((p) => p.email === c.email);
       return {
         ...c,
         profile_id: profile?.id ?? null,

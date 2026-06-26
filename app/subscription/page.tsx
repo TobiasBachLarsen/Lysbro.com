@@ -182,9 +182,7 @@ export default function SubscriptionPage() {
             ) : invoices.map((invoice) => (
               <div
                 key={invoice.date}
-                className="flex items-center justify-between px-6 py-4 transition-all"
-                onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.02)")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
+                className="flex items-center justify-between px-6 py-4 transition-all hover-row"
               >
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.05)" }}>
@@ -198,10 +196,8 @@ export default function SubscriptionPage() {
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-semibold text-white">{invoice.amount}</span>
                   <button
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all hover-blue-btn"
                     style={{ background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)", color: "#60a5fa" }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "rgba(59,130,246,0.18)")}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "rgba(59,130,246,0.1)")}
                   >
                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     PDF

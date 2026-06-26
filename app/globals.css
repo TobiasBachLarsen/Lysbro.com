@@ -202,6 +202,28 @@ select.input-dark {
 }
 .btn-gradient:active { transform: scale(0.98); }
 
+/* ── Hover Utilities ── */
+/* Nav items: hover only when not active (active state uses inline style) */
+.nav-inactive:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #94a3b8 !important;
+}
+
+/* Generic hover states for icon buttons and list items */
+.hover-muted:hover  { color: #94a3b8 !important; }
+.hover-danger:hover { color: #f87171 !important; }
+.hover-surface:hover { background: rgba(255, 255, 255, 0.03) !important; }
+.hover-row:hover    { background: rgba(255, 255, 255, 0.02) !important; }
+.hover-icon-btn:hover { background: rgba(255, 255, 255, 0.06) !important; color: #ffffff !important; }
+.hover-blue-btn:hover { background: rgba(59, 130, 246, 0.25) !important; }
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(59, 130, 246, 0.35) !important;
+  box-shadow: 0 16px 48px rgba(59, 130, 246, 0.15);
+}
+.hover-red-btn:hover  { background: rgba(239, 68, 68, 0.2) !important; }
+.cal-day-inactive:hover { background: rgba(255, 255, 255, 0.04) !important; }
+
 /* ── Ghost Button ── */
 .btn-ghost {
   background: rgba(255,255,255,0.05);

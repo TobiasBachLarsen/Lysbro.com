@@ -38,31 +38,35 @@ export default function MessagesPage() {
       if (!user) return;
       setUserId(user.id);
 
+      type ContactRow = { id: string; name: string; email: string };
+      type ProfileRow = { id: string; full_name: string | null; email: string; avatar_url: string | null };
+      type ReceivedMsgRow = { sender_id: string };
+
       // Kontakter fra contacts-tabellen
       const { data: rows } = await supabase.from("contacts").select("id, name, email").eq("user_id", user.id);
-      const emails = (rows ?? []).map((r: any) => r.email).filter(Boolean);
+      const emails = ((rows ?? []) as ContactRow[]).map((r) => r.email).filter(Boolean);
       const { data: contactProfiles } = emails.length
         ? await supabase.from("profiles").select("id, full_name, email, avatar_url").in("email", emails)
-        : { data: [] };
-      const contactIdSet = new Set((contactProfiles ?? []).map((p: any) => p.id));
+        : { data: [] as ProfileRow[] };
+      const contactIdSet = new Set(((contactProfiles ?? []) as ProfileRow[]).map((p) => p.id));
 
       // Folk der har sendt dig beskeder men ikke er kontakter (f.eks. invite-afsendere)
       const { data: receivedMsgs } = await supabase.from("messages")
         .select("sender_id").eq("receiver_id", user.id);
-      const extraIds = [...new Set((receivedMsgs ?? [])
-        .map((m: any) => m.sender_id)
-        .filter((id: string) => id !== user.id && !contactIdSet.has(id)))];
+      const extraIds = [...new Set(((receivedMsgs ?? []) as ReceivedMsgRow[])
+        .map((m) => m.sender_id)
+        .filter((id) => id !== user.id && !contactIdSet.has(id)))];
       const { data: extraProfiles } = extraIds.length
         ? await supabase.from("profiles").select("id, full_name, email, avatar_url").in("id", extraIds)
-        : { data: [] };
+        : { data: [] as ProfileRow[] };
 
       // Samlet liste af alle profiler
       const allProfiles = [
-        ...(contactProfiles ?? []).map((p: any) => {
-          const row = (rows ?? []).find((r: any) => r.email === p.email);
+        ...((contactProfiles ?? []) as ProfileRow[]).map((p) => {
+          const row = ((rows ?? []) as ContactRow[]).find((r) => r.email === p.email);
           return { id: p.id, name: row?.name ?? p.full_name ?? p.email, avatar_url: p.avatar_url ?? null };
         }),
-        ...(extraProfiles ?? []).map((p: any) => ({ id: p.id, name: p.full_name ?? p.email, avatar_url: p.avatar_url ?? null })),
+        ...((extraProfiles ?? []) as ProfileRow[]).map((p) => ({ id: p.id, name: p.full_name ?? p.email, avatar_url: p.avatar_url ?? null })),
       ];
 
       // Hent seneste besked for alle og sorter

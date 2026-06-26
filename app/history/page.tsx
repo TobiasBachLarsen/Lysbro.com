@@ -96,9 +96,7 @@ export default function HistoryPage() {
               {historyMeetings.map((m) => (
                 <div
                   key={m.id}
-                  className="grid grid-cols-5 items-center px-6 py-4 transition-all"
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)")}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
+                  className="grid grid-cols-5 items-center px-6 py-4 transition-all hover-surface"
                 >
                   <div className="flex items-center gap-3 pr-4">
                     <div className="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center" style={{ background: "rgba(59,130,246,0.1)" }}>

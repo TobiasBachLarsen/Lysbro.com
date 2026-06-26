@@ -378,18 +378,8 @@ export default function Home() {
             {features.map((f) => (
               <div
                 key={f.title}
-                className="group glass rounded-2xl p-7 cursor-default"
+                className="group glass rounded-2xl p-7 cursor-default feature-card"
                 style={{ transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)" }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(59,130,246,0.35)";
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 16px 48px rgba(59,130,246,0.15)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.08)";
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
-                }}
               >
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl" style={{ background: f.bg }}>
                   <span className={f.color}>{f.icon}</span>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "@/app/components/Sidebar";
 import { createClient } from "@/app/lib/supabase";
+import { useUser } from "@/app/lib/useUser";
 import { PLANS, BANNER_ADS, POPUP_ADS } from "@/app/lib/data";
 import type { PlanMeta } from "@/app/types";
 
@@ -16,6 +17,7 @@ interface Props {
 export default function AppLayout({ children, activeHref, sidebarExtra }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [plan, setPlan] = useState<PlanMeta>(PLANS.gratis);
+  const { user } = useUser();
 
   // Ads
   const [adDismissed, setAdDismissed] = useState(false);
@@ -28,13 +30,12 @@ export default function AppLayout({ children, activeHref, sidebarExtra }: Props)
   const [popupCountdown, setPopupCountdown] = useState(5);
 
   useEffect(() => {
+    if (!user) return;
     const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return;
-      const { data } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
+    supabase.from("profiles").select("plan").eq("id", user.id).single().then(({ data }) => {
       if (data?.plan && PLANS[data.plan]) setPlan(PLANS[data.plan]);
     });
-  }, []);
+  }, [user]);
 
   const showAds = plan.id === "gratis";
   const ad = BANNER_ADS[adIndex];

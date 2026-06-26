@@ -120,16 +120,8 @@ export default function MeetingsPage() {
 function MeetingRow({ meeting, dimmed }: { meeting: Meeting; dimmed?: boolean }) {
   return (
     <div
-      className="group flex items-center justify-between px-6 py-4 transition-all"
+      className={`group flex items-center justify-between px-6 py-4 transition-all hover-surface ${dimmed ? "hover:opacity-90" : ""}`}
       style={{ opacity: dimmed ? 0.65 : 1 }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)";
-        if (dimmed) (e.currentTarget as HTMLDivElement).style.opacity = "0.9";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.background = "transparent";
-        if (dimmed) (e.currentTarget as HTMLDivElement).style.opacity = "0.65";
-      }}
     >
       <div className="flex items-center gap-4">
         <div className="relative h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: meeting.live ? "rgba(239,68,68,0.12)" : !dimmed ? "rgba(59,130,246,0.12)" : "rgba(255,255,255,0.05)" }}>

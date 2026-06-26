@@ -342,10 +342,8 @@ export default function RoomPage() {
           )}
 
           <Link href="/meetings"
-            className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all"
+            className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all hover-red-btn"
             style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = "rgba(239,68,68,0.28)")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = "rgba(239,68,68,0.15)")}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
@@ -403,10 +401,8 @@ export default function RoomPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => handleReject(guest.id)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg transition-all"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg transition-all hover-red-btn"
                     style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.22)")}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.1)")}
                     title="Afvis"
                   >
                     <svg className="h-3.5 w-3.5" style={{ color: "#f87171" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -415,10 +411,8 @@ export default function RoomPage() {
                   </button>
                   <button
                     onClick={() => handleAdmit(guest.id)}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-all"
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-all hover:opacity-85"
                     style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "0.85")}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "1")}
                   >
                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
