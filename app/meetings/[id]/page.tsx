@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import AppLayout from "@/app/components/AppLayout";
 import { createClient } from "@/app/lib/supabase";
 
-type Meeting = { id: string; title: string; date: string; time: string; duration: string; description: string; live: boolean };
+type Meeting = { id: string; title: string; date: string; time: string; duration: string; description: string; live: boolean; user_id: string };
 
 const rsvpConfig = {
   accepted: { label: "Accepteret", color: "#4ade80", bg: "rgba(34,197,94,0.1)", border: "rgba(34,197,94,0.25)" },
@@ -27,11 +27,46 @@ export default function MeetingDetailPage() {
   const [recording, setRecording] = useState(false);
   const [showUpgradeHint, setShowUpgradeHint] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [isHost, setIsHost] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.from("meetings").select("*").eq("id", params.id as string).single().then(({ data }) => {
-      setMeeting(data);
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) { setLoading(false); return; }
+
+      // RLS only returns a row here when the caller owns the meeting.
+      const { data } = await supabase.from("meetings").select("*").eq("id", params.id as string).single();
+      if (data) {
+        setMeeting(data);
+        setIsHost(true);
+        setLoading(false);
+        return;
+      }
+
+      // Not the owner — fall back to an accepted invite, which carries its own
+      // copy of the meeting details since RLS won't let us select the row directly.
+      const { data: invite } = await supabase
+        .from("messages")
+        .select("meeting_data")
+        .eq("receiver_id", user.id)
+        .eq("type", "meeting_invite")
+        .eq("invite_status", "accepted")
+        .contains("meeting_data", { meeting_id: params.id as string })
+        .maybeSingle();
+
+      const md = invite?.meeting_data as { title?: string; date?: string; time?: string } | undefined;
+      if (md) {
+        setMeeting({
+          id: params.id as string,
+          title: md.title ?? "",
+          date: md.date ?? "",
+          time: md.time ?? "",
+          duration: "",
+          description: "",
+          live: false,
+          user_id: "",
+        });
+      }
       setLoading(false);
     });
   }, [params.id]);
@@ -56,7 +91,9 @@ export default function MeetingDetailPage() {
 
   const handleDelete = async () => {
     const supabase = createClient();
-    await supabase.from("meetings").delete().eq("id", params.id as string);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("meetings").delete().eq("id", params.id as string).eq("user_id", user.id);
     router.push("/meetings");
   };
 
@@ -233,23 +270,25 @@ export default function MeetingDetailPage() {
         </div>
 
         {/* Slet møde */}
-        <div className="rounded-2xl px-6 py-5 flex items-center justify-between gap-4" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.18)" }}>
-          <div>
-            <p className="text-sm font-semibold" style={{ color: "#f87171" }}>Slet møde</p>
-            <p className="text-xs mt-0.5" style={{ color: "#7f1d1d" }}>Deltagerne vil modtage besked om aflysningen.</p>
-          </div>
-          {!deleteConfirm ? (
-            <button onClick={() => setDeleteConfirm(true)} className="shrink-0 rounded-xl px-4 py-2 text-sm font-medium transition-all" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}>
-              Slet møde
-            </button>
-          ) : (
-            <div className="flex items-center gap-2 shrink-0">
-              <p className="text-xs font-medium" style={{ color: "#f87171" }}>Er du sikker?</p>
-              <button onClick={handleDelete} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: "#ef4444" }}>Bekræft</button>
-              <button onClick={() => setDeleteConfirm(false)} className="rounded-lg px-3 py-1.5 text-xs font-medium" style={{ background: "rgba(255,255,255,0.06)", color: "#94a3b8" }}>Fortryd</button>
+        {isHost && (
+          <div className="rounded-2xl px-6 py-5 flex items-center justify-between gap-4" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.18)" }}>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "#f87171" }}>Slet møde</p>
+              <p className="text-xs mt-0.5" style={{ color: "#7f1d1d" }}>Deltagerne vil modtage besked om aflysningen.</p>
             </div>
-          )}
-        </div>
+            {!deleteConfirm ? (
+              <button onClick={() => setDeleteConfirm(true)} className="shrink-0 rounded-xl px-4 py-2 text-sm font-medium transition-all" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}>
+                Slet møde
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 shrink-0">
+                <p className="text-xs font-medium" style={{ color: "#f87171" }}>Er du sikker?</p>
+                <button onClick={handleDelete} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: "#ef4444" }}>Bekræft</button>
+                <button onClick={() => setDeleteConfirm(false)} className="rounded-lg px-3 py-1.5 text-xs font-medium" style={{ background: "rgba(255,255,255,0.06)", color: "#94a3b8" }}>Fortryd</button>
+              </div>
+            )}
+          </div>
+        )}
 
       </main>
     </AppLayout>

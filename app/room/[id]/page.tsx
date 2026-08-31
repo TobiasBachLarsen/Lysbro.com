@@ -52,6 +52,10 @@ export default function RoomPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ room: `agora-${id}-room`, name: name }),
         });
+        if (!res.ok) {
+          setPhase("prejoin");
+          return;
+        }
         const { token } = await res.json();
         setJitsiToken(token);
         setPhase("meeting");
@@ -132,6 +136,10 @@ export default function RoomPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ room: `agora-${id}-room`, name: guestName }),
       });
+      if (!res.ok) {
+        setPhase("prejoin");
+        return;
+      }
       const { token } = await res.json();
       setJitsiToken(token);
       setPhase("meeting");

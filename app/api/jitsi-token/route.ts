@@ -27,6 +27,37 @@ export async function POST(req: NextRequest) {
   const { room, name } = await req.json();
   if (!room) return NextResponse.json({ error: "Missing room" }, { status: 400 });
 
+  const roomMatch = /^agora-(.+)-room$/.exec(room);
+  if (!roomMatch) return NextResponse.json({ error: "Invalid room" }, { status: 400 });
+  const meetingId = roomMatch[1];
+
+  const { data: meeting } = await supabase
+    .from("meetings")
+    .select("id, user_id")
+    .eq("id", meetingId)
+    .single();
+
+  if (!meeting) return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+
+  const isHost = meeting.user_id === user.id;
+
+  let isInvited = false;
+  if (!isHost) {
+    const { data: invite } = await supabase
+      .from("messages")
+      .select("id")
+      .eq("receiver_id", user.id)
+      .eq("type", "meeting_invite")
+      .eq("invite_status", "accepted")
+      .contains("meeting_data", { meeting_id: meetingId })
+      .maybeSingle();
+    isInvited = !!invite;
+  }
+
+  if (!isHost && !isInvited) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const token = jwt.sign(
     {
       aud: APP_ID,

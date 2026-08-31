@@ -159,6 +159,11 @@ export default function ContactsPage() {
       .select("id")
       .single();
 
+    if (meetingErr || !meeting) {
+      setInviteLoading(false);
+      setInviteError(`Fejl: ${meetingErr?.message ?? "Kunne ikke oprette møde"}`);
+      return;
+    }
 
     const { error: msgErr } = await supabase.from("messages").insert({
       sender_id: user.id,

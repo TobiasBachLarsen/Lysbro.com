@@ -45,7 +45,7 @@ export const config = {
     "/history/:path*",
     "/subscription/:path*",
     "/profile/:path*",
-    "/room/:path*",
+    "/admin/:path*",
     "/login",
     "/register",
   ],

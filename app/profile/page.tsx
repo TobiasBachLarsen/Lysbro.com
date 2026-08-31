@@ -98,10 +98,18 @@ export default function ProfilePage() {
     setTimeout(() => setSavedProfile(false), 2500);
   };
 
-  const handleSavePw = () => {
+  const handleSavePw = async () => {
     if (!currentPw) { setPwError("Indtast din nuværende adgangskode"); return; }
     if (newPw.length < 8) { setPwError("Ny adgangskode skal være mindst 8 tegn"); return; }
     if (newPw !== confirmPw) { setPwError("Adgangskoderne stemmer ikke overens"); return; }
+
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: currentPw });
+    if (signInError) { setPwError("Forkert nuværende adgangskode"); return; }
+
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPw });
+    if (updateError) { setPwError("Kunne ikke opdatere adgangskoden, prøv igen"); return; }
+
     setPwError("");
     setSavedPw(true);
     setCurrentPw(""); setNewPw(""); setConfirmPw("");

@@ -38,18 +38,20 @@ export default function DashboardPage() {
     const today = new Date().toISOString().slice(0, 10);
     const firstOfMonth = today.slice(0, 7) + "-01";
 
-    supabase.from("meetings").select("id, title, date, time").gte("date", today).order("date").limit(5).then(({ data }) => setUpcomingMeetings(data ?? []));
-    supabase.from("meetings").select("id", { count: "exact" }).gte("date", firstOfMonth).lte("date", today).then(({ count }) => setMonthlyMeetings(count ?? 0));
-    supabase.from("meetings").select("id", { count: "exact" }).then(({ count }) => setTotalMeetings(count ?? 0));
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       setUserName((user.user_metadata?.full_name ?? user.email ?? "").split(" ")[0]);
+
+      supabase.from("meetings").select("id, title, date, time").eq("user_id", user.id).gte("date", today).order("date").limit(5).then(({ data }) => setUpcomingMeetings(data ?? []));
+      supabase.from("meetings").select("id", { count: "exact" }).eq("user_id", user.id).gte("date", firstOfMonth).lte("date", today).then(({ count }) => setMonthlyMeetings(count ?? 0));
+      supabase.from("meetings").select("id", { count: "exact" }).eq("user_id", user.id).then(({ count }) => setTotalMeetings(count ?? 0));
+
       const { data } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
-      if (data?.plan) setCurrentPlanId((data.plan as PlanId) ?? "gratis");
+      if (data?.plan && data.plan in PLANS) setCurrentPlanId(data.plan as PlanId);
     });
   }, []);
 
-  const plan = PLANS[currentPlanId];
+  const plan = PLANS[currentPlanId] ?? PLANS.gratis;
 
   const handleStartMeeting = () => {
     setStarting(true);
