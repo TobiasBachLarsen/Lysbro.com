@@ -81,7 +81,7 @@ export default function DashboardPage() {
     if (joinCode.trim().length < 3) return;
     setJoining(true);
     setJoinError(false);
-    const raw = joinCode.trim();
+    const raw = joinCode.trim().split(/[?#]/)[0];
     const meetingId = raw.includes("/") ? raw.split("/").filter(Boolean).pop()! : raw;
 
     const supabase = createClient();
