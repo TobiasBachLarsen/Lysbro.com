@@ -25,7 +25,7 @@ export default function HistoryPage() {
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return;
+      if (!user) { setLoading(false); return; }
       const { data } = await supabase
         .from("meetings")
         .select("id, title, date, time, duration")
@@ -36,6 +36,23 @@ export default function HistoryPage() {
       setLoading(false);
     });
   }, []);
+
+  const exportCsv = () => {
+    const header = ["Møde", "Dato", "Tidspunkt", "Varighed"];
+    const rows = historyMeetings.map((m) => [m.title, formatDate(m.date), m.time, m.duration ?? ""]);
+    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const csv = [header, ...rows].map((r) => r.map(escape).join(",")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `moedehistorik-${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <AppLayout activeHref="/history">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between px-8" style={{ background: "rgba(5,7,15,0.85)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -43,7 +60,7 @@ export default function HistoryPage() {
           <h1 className="text-base font-semibold text-white">Historik & statistik</h1>
           <p className="text-xs" style={{ color: "#475569" }}>Overblik over dine afholdte møder</p>
         </div>
-        <button className="btn-ghost flex items-center gap-2 px-4 py-2 text-sm rounded-xl">
+        <button onClick={exportCsv} disabled={historyMeetings.length === 0} className="btn-ghost flex items-center gap-2 px-4 py-2 text-sm rounded-xl" style={{ opacity: historyMeetings.length === 0 ? 0.4 : 1, cursor: historyMeetings.length === 0 ? "not-allowed" : "pointer" }}>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>

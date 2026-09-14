@@ -24,6 +24,7 @@ const QUICK_ACTIONS = [
 export default function DashboardPage() {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState("");
   const [currentPlanId, setCurrentPlanId] = useState<PlanId>("gratis");
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
@@ -53,15 +54,44 @@ export default function DashboardPage() {
 
   const plan = PLANS[currentPlanId] ?? PLANS.gratis;
 
-  const handleStartMeeting = () => {
+  const handleStartMeeting = async () => {
     setStarting(true);
-    setTimeout(() => router.push("/room/instant"), 1_000);
+    setStartError("");
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setStarting(false); setStartError("Du skal være logget ind for at starte et møde."); return; }
+
+    const now = new Date();
+    const { data, error } = await supabase.from("meetings").insert({
+      user_id: user.id,
+      title: "Hurtigt møde",
+      date: now.toISOString().slice(0, 10),
+      time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+      duration: null,
+      description: null,
+      org_id: null,
+    }).select("id").single();
+
+    setStarting(false);
+    if (error || !data) { setStartError("Kunne ikke starte mødet. Prøv igen."); return; }
+    router.push(`/room/${data.id}`);
   };
 
-  const handleJoin = () => {
-    if (joinCode.length < 3) return;
+  const handleJoin = async () => {
+    if (joinCode.trim().length < 3) return;
     setJoining(true);
-    setTimeout(() => { setJoining(false); setJoinError(true); }, 1_200);
+    setJoinError(false);
+    const raw = joinCode.trim();
+    const meetingId = raw.includes("/") ? raw.split("/").filter(Boolean).pop()! : raw;
+
+    const supabase = createClient();
+    const { data } = await supabase.from("meetings").select("id").eq("id", meetingId).maybeSingle();
+    setJoining(false);
+    if (data?.id) {
+      router.push(`/room/${data.id}`);
+    } else {
+      setJoinError(true);
+    }
   };
 
   return (
@@ -73,7 +103,14 @@ export default function DashboardPage() {
           <p className="text-xs" style={{ color: "#475569" }}>{new Date().toLocaleDateString("da-DK", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
         </div>
         <div className="flex gap-3">
-<Link href="/meetings/new" className="btn-gradient flex items-center gap-2 px-4 py-2 text-sm rounded-xl">
+          <button onClick={handleStartMeeting} disabled={starting} className="btn-gradient flex items-center gap-2 px-4 py-2 text-sm rounded-xl" style={{ opacity: starting ? 0.7 : 1 }}>
+            {starting
+              ? <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+              : <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/></svg>
+            }
+            Start møde
+          </button>
+          <Link href="/meetings/new" className="btn-ghost flex items-center gap-2 px-4 py-2 text-sm rounded-xl">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
             Planlæg
           </Link>
@@ -81,6 +118,12 @@ export default function DashboardPage() {
       </header>
 
       <main className="p-8 space-y-8">
+
+        {startError && (
+          <div className="rounded-2xl px-4 py-3 text-sm animate-fade-in" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#fca5a5" }}>
+            {startError}
+          </div>
+        )}
 
         {/* Countdown + Quick Join */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -106,9 +149,9 @@ export default function DashboardPage() {
             <div className="flex gap-2">
               <input
                 className="input-dark flex-1 text-sm"
-                placeholder="Indtast mødekode..."
+                placeholder="Indtast møde-id eller link..."
                 value={joinCode}
-                onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(false); }}
+                onChange={(e) => { setJoinCode(e.target.value); setJoinError(false); }}
                 onKeyDown={(e) => { if (e.key === "Enter") handleJoin(); }}
                 style={joinError ? { borderColor: "rgba(239,68,68,0.6)", background: "rgba(239,68,68,0.06)" } : {}}
               />
@@ -120,8 +163,8 @@ export default function DashboardPage() {
               </button>
             </div>
             {joinError
-              ? <p className="mt-2 text-xs animate-fade-in" style={{ color: "#f87171" }}>Mødekoden blev ikke fundet. Tjek koden og prøv igen.</p>
-              : <p className="mt-2 text-xs" style={{ color: "#334155" }}>Få koden fra møde-arrangøren</p>
+              ? <p className="mt-2 text-xs animate-fade-in" style={{ color: "#f87171" }}>Mødet blev ikke fundet. Tjek møde-id eller linket og prøv igen.</p>
+              : <p className="mt-2 text-xs" style={{ color: "#334155" }}>Få møde-id eller linket fra møde-arrangøren</p>
             }
           </div>
         </div>

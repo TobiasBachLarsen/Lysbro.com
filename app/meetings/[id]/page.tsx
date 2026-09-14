@@ -8,24 +8,12 @@ import { createClient } from "@/app/lib/supabase";
 
 type Meeting = { id: string; title: string; date: string; time: string; duration: string; description: string; live: boolean; user_id: string };
 
-const rsvpConfig = {
-  accepted: { label: "Accepteret", color: "#4ade80", bg: "rgba(34,197,94,0.1)", border: "rgba(34,197,94,0.25)" },
-  pending:  { label: "Afventer",   color: "#fbbf24", bg: "rgba(245,158,11,0.1)", border: "rgba(245,158,11,0.25)" },
-  declined: { label: "Afslået",    color: "#f87171", bg: "rgba(239,68,68,0.1)",  border: "rgba(239,68,68,0.25)" },
-};
-
-const IS_PRO = false;
-
 export default function MeetingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [notes, setNotes] = useState("");
-  const [notesSaved, setNotesSaved] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [showUpgradeHint, setShowUpgradeHint] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [isHost, setIsHost] = useState(false);
 
@@ -79,16 +67,6 @@ export default function MeetingDetailPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const saveNotes = () => {
-    setNotesSaved(true);
-    setTimeout(() => setNotesSaved(false), 2000);
-  };
-
-  const handleRecord = () => {
-    if (!IS_PRO) { setShowUpgradeHint(true); return; }
-    setRecording((r) => !r);
-  };
-
   const handleDelete = async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -126,48 +104,12 @@ export default function MeetingDetailPage() {
           <h1 className="text-base font-semibold text-white truncate">{meeting.title}</h1>
         </div>
         <div className="flex items-center gap-2">
-          {/* Record button */}
-          <button
-            onClick={handleRecord}
-            className="relative flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all"
-            style={IS_PRO
-              ? { background: recording ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.05)", border: `1px solid ${recording ? "rgba(239,68,68,0.35)" : "rgba(255,255,255,0.1)"}`, color: recording ? "#f87171" : "#94a3b8" }
-              : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "#334155", cursor: "pointer" }
-            }
-          >
-            {!IS_PRO && (
-              <svg className="h-3.5 w-3.5 shrink-0" style={{ color: "#475569" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
-            )}
-            {IS_PRO && recording && <span className="h-2 w-2 rounded-full animate-ping" style={{ background: "#ef4444" }} />}
-            {IS_PRO && !recording && <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="4" fill="currentColor"/><path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6.75 6.75 0 100-13.5 6.75 6.75 0 000 13.5z"/></svg>}
-            {IS_PRO ? (recording ? "Stop optagelse" : "Optag møde") : "Optag møde"}
-            {!IS_PRO && <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: "rgba(139,92,246,0.2)", color: "#c4b5fd" }}>Pro</span>}
-          </button>
-
           <Link href={`/room/${meeting.id}`} className="btn-gradient flex items-center gap-2 px-4 py-2 text-sm rounded-xl">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/></svg>
             Start møde
           </Link>
         </div>
       </header>
-
-      {/* Upgrade hint for recording */}
-      {showUpgradeHint && (
-        <div className="animate-fade-in mx-8 mt-4 flex items-center justify-between gap-4 rounded-2xl px-5 py-3.5" style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>
-          <div className="flex items-center gap-2">
-            <svg className="h-4 w-4 shrink-0" style={{ color: "#a78bfa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
-            <p className="text-sm" style={{ color: "#c4b5fd" }}>Optagelse kræver <strong>Professionel-plan</strong> eller højere.</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Link href="/subscription" className="rounded-xl px-4 py-1.5 text-xs font-bold text-white" style={{ background: "linear-gradient(135deg, #8b5cf6, #06b6d4)" }}>
-              Opgrader nu
-            </Link>
-            <button onClick={() => setShowUpgradeHint(false)} style={{ color: "#475569" }}>
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-          </div>
-        </div>
-      )}
 
       <main className="p-8 max-w-3xl space-y-5">
 
@@ -230,42 +172,6 @@ export default function MeetingDetailPage() {
           </div>
           <div className="px-6 py-8 text-center">
             <p className="text-sm" style={{ color: "#334155" }}>Deltager-invitationer kommer i en fremtidig version</p>
-          </div>
-        </div>
-
-        {/* Mødenoter */}
-        <div className="glass rounded-2xl p-6 space-y-4">
-          <div className="flex items-center justify-between pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.12)" }}>
-                <svg className="h-4 w-4" style={{ color: "#a78bfa" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-              </div>
-              <h2 className="text-sm font-semibold text-white">Mødenoter</h2>
-            </div>
-            {notesSaved && (
-              <span className="animate-fade-in text-xs font-semibold" style={{ color: "#4ade80" }}>Gemt!</span>
-            )}
-          </div>
-
-          <textarea
-            className="input-dark resize-none w-full"
-            rows={5}
-            placeholder="Skriv noter her — de gemmes automatisk til mødehistorikken..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-
-          <div className="flex items-center justify-between">
-            <p className="text-xs" style={{ color: "#334155" }}>Notes gemmes med mødet i historikken</p>
-            <button
-              onClick={saveNotes}
-              disabled={!notes.trim()}
-              className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white transition-all"
-              style={{ background: notes.trim() ? "linear-gradient(135deg, #8b5cf6, #06b6d4)" : "rgba(255,255,255,0.05)", opacity: notes.trim() ? 1 : 0.4, cursor: notes.trim() ? "pointer" : "not-allowed" }}
-            >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
-              Gem noter
-            </button>
           </div>
         </div>
 
