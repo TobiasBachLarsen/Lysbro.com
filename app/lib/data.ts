@@ -1,19 +1,5 @@
 import type { PlanMeta, Ad, PopupAd } from "@/app/types";
 
-export const NAV_ITEMS = [
-  {
-    href: "/dashboard",
-    label: "Overblik",
-    icon: "dashboard" as const,
-  },
-  { href: "/meetings",     label: "Møder",       icon: "meetings"     as const },
-  { href: "/calendar",     label: "Kalender",    icon: "calendar"     as const },
-  { href: "/contacts",     label: "Kontakter",   icon: "contacts"     as const },
-  { href: "/history",      label: "Historik",    icon: "history"      as const },
-  { href: "/subscription", label: "Abonnement",  icon: "subscription" as const },
-  { href: "/profile",      label: "Profil",      icon: "profile"      as const },
-] as const;
-
 export const PLANS: Record<string, PlanMeta> = {
   gratis:  { id: "gratis",  label: "Gratis",       price: "0",     color: "#60a5fa", meetingsUsed: 2,  meetingsMax: 2    },
   pro:     { id: "pro",     label: "Professionel", price: "249",   color: "#a78bfa", meetingsUsed: 14, meetingsMax: null },

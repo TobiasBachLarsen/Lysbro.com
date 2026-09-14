@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { PlanMeta, ContactRequestRow, InviteMessageRow, ProfileRow, OrgAnnouncementPayload, OrgMessagePayload, MessagePayload } from "@/app/types";
 import { PLANS, BANNER_ADS } from "@/app/lib/data";
 import { createClient } from "@/app/lib/supabase";
@@ -64,7 +63,6 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
   const orgChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
   const msgChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
   const unread = notifications.filter((n) => !n.read).length;
-  const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();

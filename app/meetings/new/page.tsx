@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppLayout from "@/app/components/AppLayout";
@@ -13,7 +13,6 @@ export default function NewMeetingPage() {
   const [inviteList, setInviteList] = useState<{ id: string; name: string; email: string }[]>([]);
   const [inviteInput, setInviteInput] = useState("");
   const [inviteSuggestions, setInviteSuggestions] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
-  const inviteRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null);
@@ -57,7 +56,7 @@ export default function NewMeetingPage() {
   const removeInvite = (id: string) => setInviteList((prev) => prev.filter((i) => i.id !== id));
 
   const applyTemplate = (t: typeof MEETING_TEMPLATES[0]) => {
-    setForm((prev) => ({ ...prev, title: t.title, time: t.time, duration: t.duration, description: t.description, invites: t.invites }));
+    setForm((prev) => ({ ...prev, title: t.title, time: t.time, duration: t.duration, description: t.description }));
     setAppliedTemplate(t.label);
   };
 
@@ -243,7 +242,7 @@ export default function NewMeetingPage() {
                   <h2 className="text-sm font-semibold text-white">Invitationer</h2>
                 </div>
 
-                <div ref={inviteRef}>
+                <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wide" style={{ color: "#64748b" }}>Inviter deltagere</label>
 
                   {/* Tags */}

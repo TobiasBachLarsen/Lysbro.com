@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "@/app/lib/supabase";
@@ -28,7 +28,6 @@ export default function RoomPage() {
   const [showPanel, setShowPanel] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [jitsiToken, setJitsiToken] = useState<string | null>(null);
-  const channelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
 
   // Check if current user is the host
   useEffect(() => {
@@ -102,7 +101,6 @@ export default function RoomPage() {
       })
       .subscribe();
 
-    channelRef.current = ch;
     return () => { supabase.removeChannel(ch); };
   }, [phase, isHost, id]);
 
@@ -123,7 +121,6 @@ export default function RoomPage() {
       })
       .subscribe();
 
-    channelRef.current = ch;
     return () => { supabase.removeChannel(ch); };
   }, [phase, lobbyId]);
 
