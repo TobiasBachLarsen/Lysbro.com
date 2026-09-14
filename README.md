@@ -101,9 +101,7 @@ Create `.env.local`:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-JITSI_APP_ID=your_jitsi_app_id
 JITSI_SECRET=your_jitsi_jwt_secret
-NEXT_PUBLIC_JITSI_DOMAIN=your_jitsi_domain
 ```
 
 ```bash
@@ -133,3 +131,13 @@ The Jitsi server runs as a standalone VPS on Hetzner in Falkenstein, Germany, co
 - JWTs for meeting access are short-lived and signed server-side
 - No third-party analytics or tracking
 - GDPR-compliant: data processor agreement available on Erhverv plan
+
+---
+
+## Kendte begrænsninger og næste skridt
+
+Nogle ting er bevidst skåret fra i denne omgang, ikke overset:
+
+- **Betaling er en attrap.** Plan-skift og fakturering er ikke bygget endnu — abonnementssiden er informativ, og planændringer håndteres manuelt.
+- **Ingen automatiske tests endnu.** Der er ikke opsat en test-runner. Næste skridt for et projekt i denne størrelse.
+- **Deltager-panel på mødesiden kommer senere.** Møde-invitationer og RSVP fungerer allerede via beskeder, men er ikke vist på selve mødesiden endnu.
