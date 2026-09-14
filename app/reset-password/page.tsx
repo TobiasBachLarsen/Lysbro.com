@@ -21,8 +21,8 @@ export default function ResetPasswordPage() {
       setError("Adgangskoderne matcher ikke.");
       return;
     }
-    if (password.length < 6) {
-      setError("Adgangskoden skal være mindst 6 tegn.");
+    if (password.length < 8) {
+      setError("Adgangskoden skal være mindst 8 tegn.");
       return;
     }
     setIsLoading(true);

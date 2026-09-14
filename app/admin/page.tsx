@@ -126,7 +126,7 @@ export default function AdminPage() {
   const loadData = async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     setUserId(user.id);
     currentUserIdRef.current = user.id;
 

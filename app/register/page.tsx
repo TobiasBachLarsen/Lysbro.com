@@ -81,8 +81,8 @@ export default function RegisterPage() {
             <p className="text-xs font-bold uppercase tracking-[0.15em] mb-5" style={{ color: "#64748b" }}>Hvad er inkluderet — gratis</p>
             <div className="space-y-3.5">
               {[
-                "10 møder pr. måned",
-                "Op til 10 deltagere pr. møde",
+                "2 møder pr. måned",
+                "Op til 2 deltagere pr. møde",
                 "End-to-end kryptering",
                 "Europæisk hosting",
               ].map((f) => (

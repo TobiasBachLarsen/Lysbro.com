@@ -33,7 +33,7 @@ export default function ContactsPage() {
   const loadData = async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
 
     const [{ data: contactData }, { data: requestData }] = await Promise.all([
       supabase.from("contacts").select("*").eq("user_id", user.id).order("name"),

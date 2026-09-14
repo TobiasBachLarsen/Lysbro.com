@@ -10,8 +10,13 @@ type MeetingData = { title: string; date: string; time: string; meeting_id: stri
 type OrgData = { org_id: string; org_name: string };
 type Message = { id: string; sender_id: string; receiver_id: string; content: string; read: boolean; created_at: string; type?: string; meeting_data?: MeetingData | OrgData; invite_status?: string };
 
+const AVATAR_SIZE_CLASSES: Record<number, string> = {
+  9: "h-9 w-9",
+  10: "h-10 w-10",
+};
+
 function Avatar({ contact, size = 10 }: { contact: Pick<Contact, "initials" | "color" | "avatar_url" | "name">; size?: number }) {
-  const cls = `h-${size} w-${size} shrink-0 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-white`;
+  const cls = `${AVATAR_SIZE_CLASSES[size] ?? AVATAR_SIZE_CLASSES[10]} shrink-0 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-white`;
   return (
     <div className={cls} style={{ background: contact.color }}>
       {contact.avatar_url

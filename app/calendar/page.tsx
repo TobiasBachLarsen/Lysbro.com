@@ -195,7 +195,7 @@ export default function CalendarPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span style={{ color: "#64748b" }}>Møder planlagt</span>
-                  <span className="font-semibold text-white">{Object.keys(meetingsByDay).length}</span>
+                  <span className="font-semibold text-white">{Object.values(meetingsByDay).reduce((sum, day) => sum + day.length, 0)}</span>
                 </div>
               </div>
             </div>
