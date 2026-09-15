@@ -2,7 +2,7 @@
 
 ## Summary
 
-After launching Lysbro.com, I ran a follow-up security review of the application's authentication and access-control logic, focused on meeting access, ownership checks, and admin routes. The review was a combination of manual code review and AI-assisted analysis (Claude Code), followed by manual verification and testing of every finding before it was fixed. Six issues were found and fixed, along with one notable case where a database-level control (Supabase RLS) had already prevented what code alone made look like a vulnerability. None of the issues showed signs of having been exploited in production.
+After launching Lysbro.com, I ran a follow-up security review of the application's authentication and access-control logic, focused on meeting access, ownership checks, and admin routes. The review was a manual code review followed by verification and testing of every finding before it was fixed. Six issues were found and fixed, along with one notable case where a database-level control (Supabase RLS) had already prevented what code alone made look like a vulnerability. None of the issues showed signs of having been exploited in production.
 
 ## Scope and Method
 
