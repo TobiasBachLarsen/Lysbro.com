@@ -2,7 +2,7 @@
 
 A self-hosted, GDPR-compliant video conferencing platform built for the European market. Lysbro lets users host encrypted video meetings without sending data outside the EU/EEA.
 
-**Live:** [lysbro.com](https://lysbro.com)
+**Status:** built and used as the final exam project (top grade); the hosted instance at lysbro.com is currently switched off to save server costs, while the code is still maintained. Run it locally as described below.
 
 ---
 
