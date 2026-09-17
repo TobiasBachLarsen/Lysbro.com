@@ -69,6 +69,9 @@ export default function ContactsPage() {
     setLoading(false);
   };
 
+  // Indlæsning ved mount: loadData sætter først state efter sit første await, så der
+  // er ingen synkron setState i selve effecten.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadData(); }, []);
 
   const searchUsers = async (q: string) => {
