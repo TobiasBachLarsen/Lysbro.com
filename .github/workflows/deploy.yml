@@ -1,9 +1,9 @@
 name: Deploy Frontend to Railway
 
+# Manual only: the hosted instance is switched off for now, so an automatic deploy on
+# every push would just fail. Run it from the Actions tab when hosting is back.
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   deploy:

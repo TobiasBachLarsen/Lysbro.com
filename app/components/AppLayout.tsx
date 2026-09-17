@@ -70,9 +70,10 @@ export default function AppLayout({ children, activeHref, sidebarExtra }: Props)
     return () => clearInterval(id);
   }, [showAds]);
 
-  // Popup-annonce hvert 10. minut
+  // Popup-annonce hvert 10. minut. Visningen er allerede betinget af showAds nedenfor,
+  // så der er ingen grund til at nulstille state her.
   useEffect(() => {
-    if (!showAds) { setPopupVisible(false); return; }
+    if (!showAds) return;
     const id = setInterval(() => {
       setPopupIndex((i) => (i + 1) % POPUP_ADS.length);
       setPopupCountdown(5);

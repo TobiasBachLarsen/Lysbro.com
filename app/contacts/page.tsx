@@ -26,8 +26,6 @@ export default function ContactsPage() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteDone, setInviteDone] = useState<string[]>([]);
 
-  useEffect(() => { loadData(); }, []);
-
   const closeModal = () => { setShowAdd(false); setForm(EMPTY_FORM); setSelectedUser(null); setSuggestions([]); };
 
   const loadData = async () => {
@@ -70,6 +68,11 @@ export default function ContactsPage() {
 
     setLoading(false);
   };
+
+  // Indlæsning ved mount: loadData sætter først state efter sit første await, så der
+  // er ingen synkron setState i selve effecten.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { loadData(); }, []);
 
   const searchUsers = async (q: string) => {
     setSelectedUser(null);

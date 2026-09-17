@@ -25,7 +25,10 @@ export default function LoginPage() {
       setIsLoading(false);
       return;
     }
-    router.push("/dashboard");
+    // proxy.ts sender ?next=/den/side/man/ville/til med. Kun interne stier accepteres,
+    // så et link som ?next=https://ond.side ikke kan bruges til at sende folk væk.
+    const next = new URLSearchParams(window.location.search).get("next");
+    router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
     router.refresh();
   };
 
