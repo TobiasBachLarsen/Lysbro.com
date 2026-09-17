@@ -34,6 +34,9 @@ export default function ResetPasswordPage() {
       return;
     }
     setDone(true);
+    // Linket i mailen loggede brugeren ind med en midlertidig session. Uden signOut
+    // ville /login bare sende videre til /dashboard, stik imod beskeden på skærmen.
+    await supabase.auth.signOut();
     setTimeout(() => router.push("/login"), 2000);
   };
 

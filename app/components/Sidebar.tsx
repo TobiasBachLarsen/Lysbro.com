@@ -255,7 +255,10 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
 
   const handleSignOut = async () => {
     const supabase = createClient();
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    // Fejler serverens logout (netværk, 5xx), beholder klienten ellers sessionen, og
+    // /login ville sende brugeren lige tilbage til dashboardet. Ryd lokalt uanset.
+    if (error) await supabase.auth.signOut({ scope: "local" });
     window.location.href = "/login";
   };
 
