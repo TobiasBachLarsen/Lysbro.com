@@ -114,7 +114,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Deployment
 
-The frontend is deployed to Railway (EU West region). Push to `main` triggers an automatic build via `railway.json`.
+The frontend deploys to Railway (EU West region) via the manual "Deploy Frontend to Railway" workflow, using `railway.json`. Automatic deploys are switched off while the hosted instance is down; every push and pull request still runs lint and a production build in CI.
 
 The Jitsi server runs as a standalone VPS on Hetzner in Falkenstein, Germany, configured with:
 - Prosody with `mod_auth_token` for JWT-based room access
