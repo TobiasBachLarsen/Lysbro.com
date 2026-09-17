@@ -24,6 +24,8 @@ export default function RoomPage() {
   const [isHost, setIsHost] = useState(false);
   const [guestName, setGuestName] = useState("");
   const [lobbyId, setLobbyId] = useState<string | null>(null);
+  const [knocking, setKnocking] = useState(false);
+  const [knockError, setKnockError] = useState<string | null>(null);
   const [waitingGuests, setWaitingGuests] = useState<LobbyEntry[]>([]);
   const [showPanel, setShowPanel] = useState(false);
   const [seconds, setSeconds] = useState(0);
@@ -131,9 +133,10 @@ export default function RoomPage() {
       const res = await fetch("/api/jitsi-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ room: `agora-${id}-room`, name: guestName }),
+        body: JSON.stringify({ room: `agora-${id}-room`, name: guestName, lobbyId }),
       });
       if (!res.ok) {
+        setKnockError("Du blev lukket ind, men adgangen kunne ikke oprettes. Prøv at banke på igen.");
         setPhase("prejoin");
         return;
       }
@@ -142,19 +145,29 @@ export default function RoomPage() {
       setPhase("meeting");
     }, 1500);
     return () => clearTimeout(t);
-  }, [phase, id, guestName]);
+  }, [phase, id, guestName, lobbyId]);
 
   const handleKnock = async () => {
-    if (!guestName.trim()) return;
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("meeting_lobby")
-      .insert({ meeting_id: id, guest_name: guestName.trim() })
-      .select("id")
-      .single();
-    if (data?.id) {
+    if (!guestName.trim() || knocking) return;
+    setKnocking(true);
+    setKnockError(null);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("meeting_lobby")
+        .insert({ meeting_id: id, guest_name: guestName.trim() })
+        .select("id")
+        .single();
+      if (error || !data?.id) {
+        setKnockError("Kunne ikke banke på. Tjek din forbindelse og prøv igen.");
+        return;
+      }
       setLobbyId(data.id);
       setPhase("waiting");
+    } catch {
+      setKnockError("Kunne ikke banke på. Tjek din forbindelse og prøv igen.");
+    } finally {
+      setKnocking(false);
     }
   };
 
@@ -229,9 +242,12 @@ export default function RoomPage() {
               />
             </div>
 
+            {knockError && (
+              <p className="mb-3 text-sm" style={{ color: "#f87171" }}>{knockError}</p>
+            )}
             <button
               onClick={handleKnock}
-              disabled={!guestName.trim()}
+              disabled={!guestName.trim() || knocking}
               className="btn-gradient w-full py-3 text-sm font-semibold rounded-xl flex items-center justify-center gap-2"
               style={{ opacity: guestName.trim() ? 1 : 0.45, cursor: guestName.trim() ? "pointer" : "not-allowed" }}
             >
