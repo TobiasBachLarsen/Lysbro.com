@@ -48,7 +48,6 @@ interface SidebarProps {
 export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen = false, onMobileClose }: SidebarProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [sidebarAdIdx, setSidebarAdIdx] = useState(1);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [userInitials, setUserInitials] = useState("?");
   const [plan, setPlan] = useState<PlanMeta>(planProp ?? PLANS.gratis);
@@ -134,7 +133,6 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
 
       const { data: membership } = await supabase.from("organization_members")
         .select("role, org_id").eq("user_id", user.id).maybeSingle();
-      setIsAdmin(membership?.role === "admin");
       if (membership?.org_id) setOrgId(membership.org_id);
 
       if (membership?.org_id) {
@@ -211,12 +209,16 @@ export default function Sidebar({ activeHref, plan: planProp, extra, mobileOpen 
     return () => { supabase.removeChannel(ch); };
   }, [orgId]);
 
-  useEffect(() => {
+  // Når brugeren navigerer til /admin, er organisationsbeskederne set. State justeres
+  // under render, når prop'en skifter, fremfor i en effect (undgår et ekstra render).
+  const [seenAdminHref, setSeenAdminHref] = useState(activeHref);
+  if (activeHref !== seenAdminHref) {
+    setSeenAdminHref(activeHref);
     if (activeHref === "/admin") {
       setOrgNewCount(0);
       setNotifications((prev) => prev.filter((n) => !n.id.startsWith("ann-") && !n.id.startsWith("orgmsg-")));
     }
-  }, [activeHref]);
+  }
 
   useEffect(() => {
     if (!currentUserId) return;

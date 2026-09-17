@@ -26,8 +26,6 @@ export default function ContactsPage() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteDone, setInviteDone] = useState<string[]>([]);
 
-  useEffect(() => { loadData(); }, []);
-
   const closeModal = () => { setShowAdd(false); setForm(EMPTY_FORM); setSelectedUser(null); setSuggestions([]); };
 
   const loadData = async () => {
@@ -70,6 +68,8 @@ export default function ContactsPage() {
 
     setLoading(false);
   };
+
+  useEffect(() => { loadData(); }, []);
 
   const searchUsers = async (q: string) => {
     setSelectedUser(null);

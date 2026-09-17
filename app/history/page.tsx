@@ -20,9 +20,8 @@ function totalMinutes(meetings: Meeting[]) {
 export default function HistoryPage() {
   const [historyMeetings, setHistoryMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
-  const today = new Date().toISOString().slice(0, 10);
-
   useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { setLoading(false); return; }
@@ -46,7 +45,7 @@ export default function HistoryPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `moedehistorik-${today}.csv`;
+    a.download = `moedehistorik-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
