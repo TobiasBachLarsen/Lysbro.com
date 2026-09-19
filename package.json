@@ -26,10 +26,5 @@
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "pnpm": {
-    "overrides": {
-      "ws": ">=8.21.0"
-    }
   }
 }
