@@ -4,8 +4,16 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    # Én samlet PR mod test, så det følger test -> main-flowet
+    target-branch: "test"
+    groups:
+      npm:
+        patterns: ["*"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    target-branch: "test"
+    groups:
+      actions:
+        patterns: ["*"]
